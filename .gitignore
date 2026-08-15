@@ -1,0 +1,6 @@
+# Arquivos temporários/scratch (ex: sondas de banco geradas por sessões de trabalho)
+.tmp/
+
+# Sub-repositórios próprios — rastreados em seus próprios repos Git, não aqui
+Simpleto.BackApi/
+Simpleto_front_adm/

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SíndApp — Sistema de Gestão de Condomínios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue-50: #E6F1FB; --blue-100: #B5D4F4; --blue-200: #85B7EB;
+    --blue-400: #378ADD; --blue-600: #185FA5; --blue-800: #0C447C; --blue-900: #042C53;
+    --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-200: #B4B2A9;
+    --gray-400: #888780; --gray-600: #5F5E5A; --gray-800: #444441; --gray-900: #2C2C2A;
+    --teal-50: #E1F5EE; --teal-400: #1D9E75; --teal-600: #0F6E56; --teal-800: #085041;
+    --amber-50: #FAEEDA; --amber-400: #BA7517; --amber-600: #854F0B;
+    --red-50: #FCEBEB; --red-400: #E24B4A; --red-600: #A32D2D;
+    --green-50: #EAF3DE; --green-400: #639922; --green-600: #3B6D11;
+    --sidebar-w: 260px;
+    --sidebar-collapsed: 64px;
+    --topbar-h: 60px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  body { font-family: var(--font); background: #F0F2F5; color: var(--gray-900); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+    background: var(--blue-900); display: flex; align-items: center;
+    padding: 0 20px; gap: 16px; z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .topbar-logo { display: flex; align-items: center; gap: 10px; width: var(--sidebar-w); flex-shrink: 0; }
+  .topbar-logo .logo-icon {
+    width: 32px; height: 32px; background: var(--blue-400); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;
+  }
+  .topbar-logo .logo-name { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-logo .logo-name span { color: var(--blue-200); }
+  .topbar-center { flex: 1; display: flex; align-items: center; gap: 12px; }
+  .portal-switcher {
+    display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer; color: #fff; font-size: 13px; font-family: var(--font);
+  }
+  .portal-switcher .portal-badge {
+    background: var(--blue-400); color: #fff; font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .topbar-search {
+    flex: 1; max-width: 400px; display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 0 12px; height: 36px;
+  }
+  .topbar-search input {
+    background: transparent; border: none; outline: none; color: #fff;
+    font-family: var(--font); font-size: 13px; width: 100%;
+  }
+  .topbar-search input::placeholder { color: rgba(255,255,255,0.4); }
+  .topbar-search i { color: rgba(255,255,255,0.4); font-size: 16px; }
+  .topbar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .topbar-btn {
+    width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.7); cursor: pointer; position: relative; transition: background 0.15s;
+  }
+  .topbar-btn:hover { background: rgba(255,255,255,0.15); }
+  .topbar-btn .badge {
+    position: absolute; top: 6px; right: 6px; width: 7px; height: 7px;
+    background: var(--red-400); border-radius: 50%; border: 1.5px solid var(--blue-900);
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--teal-600);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  }
+  .condo-selector {
+    display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    padding: 5px 10px; cursor: pointer; max-width: 220px;
+  }
+  .condo-selector .condo-thumb {
+    width: 24px; height: 24px; background: var(--teal-400); border-radius: 5px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px;
+  }
+  .condo-selector .condo-name { color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .condo-selector i { color: rgba(255,255,255,0.4); font-size: 14px; margin-left: auto; }
+
+  /* ─── LAYOUT WRAPPER ─── */
+  .app-body { display: flex; margin-top: var(--topbar-h); min-height: calc(100vh - var(--topbar-h)); }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w); background: #fff; position: fixed;
+    top: var(--topbar-h); bottom: 0; left: 0; overflow-y: auto; overflow-x: hidden;
+    border-right: 1px solid #E8EAF0; z-index: 90;
+    transition: width 0.22s ease; display: flex; flex-direction: column;
+  }
+  .sidebar.collapsed { width: var(--sidebar-collapsed); }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--gray-100); border-radius: 2px; }
+
+  .sidebar-portal-info {
+    padding: 16px; border-bottom: 1px solid #F0F2F5;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .portal-icon {
+    width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .portal-icon.admin { background: var(--blue-50); color: var(--blue-600); }
+  .portal-icon.condo { background: var(--teal-50); color: var(--teal-600); }
+  .portal-info-text { min-width: 0; }
+  .portal-info-text .portal-label { font-size: 10px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+  .portal-info-text .portal-name { font-size: 13px; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .nav-section { padding: 8px 0; }
+  .nav-section-label {
+    padding: 8px 16px 4px; font-size: 10px; font-weight: 600; color: var(--gray-400);
+    text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; overflow: hidden;
+  }
+  .sidebar.collapsed .nav-section-label { opacity: 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    cursor: pointer; border-radius: 8px; margin: 1px 8px; transition: background 0.12s;
+    text-decoration: none; color: var(--gray-600); position: relative; white-space: nowrap;
+  }
+  .nav-item:hover { background: var(--blue-50); color: var(--blue-800); }
+  .nav-item.active { background: var(--blue-50); color: var(--blue-800); font-weight: 500; }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px; background: var(--blue-600); border-radius: 0 2px 2px 0;
+  }
+  .nav-item i { font-size: 18px; flex-shrink: 0; }
+  .nav-item .nav-label { font-size: 13px; }
+  .sidebar.collapsed .nav-label { display: none; }
+  .nav-item .nav-badge {
+    margin-left: auto; background: var(--red-50); color: var(--red-600);
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px;
+  }
+  .sidebar.collapsed .nav-badge { display: none; }
+  .nav-item .nav-chevron { margin-left: auto; font-size: 14px; transition: transform 0.2s; }
+  .sidebar.collapsed .nav-chevron { display: none; }
+  .nav-item.has-sub.open .nav-chevron { transform: rotate(90deg); }
+
+  .nav-sub { overflow: hidden; max-height: 0; transition: max-height 0.2s ease; }
+  .nav-sub.open { max-height: 500px; }
+  .sidebar.collapsed .nav-sub { display: none; }
+  .nav-sub-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 42px;
+    cursor: pointer; border-radius: 8px; margin: 1px 8px; color: var(--gray-600);
+    font-size: 12.5px; transition: background 0.1s;
+  }
+  .nav-sub-item:hover { background: var(--blue-50); color: var(--blue-800); }
+  .nav-sub-item.active { color: var(--blue-800); font-weight: 500; }
+  .nav-sub-item::before { content: ''; width: 4px; height: 4px; background: currentColor; border-radius: 50%; flex-shrink: 0; }
+
+  .sidebar-footer { margin-top: auto; padding: 12px; border-top: 1px solid #F0F2F5; }
+  .collapse-btn {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; color: var(--gray-400); font-size: 13px;
+    transition: background 0.12s;
+  }
+  .collapse-btn:hover { background: var(--gray-50); color: var(--gray-800); }
+  .collapse-btn i { font-size: 18px; }
+  .sidebar.collapsed .collapse-btn span { display: none; }
+
+  /* ─── MAIN CONTENT ─── */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; transition: margin-left 0.22s; }
+  .main.sidebar-collapsed { margin-left: var(--sidebar-collapsed); }
+
+  /* ─── BREADCRUMB ─── */
+  .breadcrumb-bar {
+    background: #fff; border-bottom: 1px solid #E8EAF0;
+    padding: 0 24px; height: 44px; display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; color: var(--gray-400);
+  }
+  .breadcrumb-bar i { font-size: 14px; }
+  .breadcrumb-bar a { color: var(--gray-400); text-decoration: none; }
+  .breadcrumb-bar a:hover { color: var(--blue-600); }
+  .breadcrumb-bar .current { color: var(--gray-800); font-weight: 500; }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    padding: 20px 24px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  }
+  .page-title { font-size: 20px; font-weight: 600; color: var(--gray-900); letter-spacing: -0.3px; }
+  .page-subtitle { font-size: 13px; color: var(--gray-400); margin-top: 2px; }
+  .page-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.12s;
+  }
+  .btn-primary { background: var(--blue-600); color: #fff; }
+  .btn-primary:hover { background: var(--blue-800); }
+  .btn-secondary { background: #fff; color: var(--gray-800); border: 1px solid #E0E4EC; }
+  .btn-secondary:hover { background: var(--gray-50); }
+  .btn-ghost { background: transparent; color: var(--gray-600); padding: 8px 10px; }
+  .btn-ghost:hover { background: var(--gray-50); }
+
+  /* ─── PAGE CONTENT ─── */
+  .page-content { padding: 20px 24px 32px; flex: 1; }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: #fff; border-radius: 12px; padding: 16px 18px;
+    border: 1px solid #E8EAF0;
+  }
+  .kpi-label { font-size: 12px; color: var(--gray-400); font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 26px; font-weight: 600; color: var(--gray-900); letter-spacing: -0.5px; }
+  .kpi-sub { font-size: 12px; margin-top: 4px; }
+  .kpi-sub.up { color: var(--teal-600); }
+  .kpi-sub.down { color: var(--red-600); }
+  .kpi-sub.neutral { color: var(--gray-400); }
+  .kpi-icon-wrap {
+    float: right; width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .kpi-icon-wrap.blue { background: var(--blue-50); color: var(--blue-600); }
+  .kpi-icon-wrap.teal { background: var(--teal-50); color: var(--teal-600); }
+  .kpi-icon-wrap.amber { background: var(--amber-50); color: var(--amber-600); }
+  .kpi-icon-wrap.red { background: var(--red-50); color: var(--red-600); }
+
+  /* ─── CONTENT GRID ─── */
+  .content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+  .content-card {
+    background: #fff; border-radius: 12px; border: 1px solid #E8EAF0; overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid #F0F2F5;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+  .card-subtitle { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+
+  /* ─── TABLE ─── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px;
+    background: #FAFAFA; border-bottom: 1px solid #F0F2F5;
+  }
+  .data-table td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #F7F8FA; color: var(--gray-800); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #FAFCFF; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px;
+    border-radius: 6px; font-size: 11px; font-weight: 600;
+  }
+  .status-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .status-badge.pago { background: var(--teal-50); color: var(--teal-600); }
+  .status-badge.pendente { background: var(--amber-50); color: var(--amber-400); }
+  .status-badge.vencido { background: var(--red-50); color: var(--red-600); }
+  .status-badge.ativo { background: var(--blue-50); color: var(--blue-600); }
+
+  /* ─── SIDEBAR RIGHT (activity) ─── */
+  .activity-list { padding: 8px 0; }
+  .activity-item { padding: 12px 20px; display: flex; gap: 12px; align-items: flex-start; }
+  .activity-item + .activity-item { border-top: 1px solid #F7F8FA; }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .activity-dot.blue { background: var(--blue-400); }
+  .activity-dot.teal { background: var(--teal-400); }
+  .activity-dot.amber { background: var(--amber-400); }
+  .activity-dot.red { background: var(--red-400); }
+  .activity-text { font-size: 12.5px; color: var(--gray-800); line-height: 1.5; }
+  .activity-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+  /* ─── QUICK ACCESS ─── */
+  .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #F0F2F5; }
+  .quick-item {
+    background: #fff; padding: 14px 12px; display: flex; flex-direction: column;
+    align-items: center; gap: 6px; cursor: pointer; transition: background 0.1s;
+  }
+  .quick-item:hover { background: var(--blue-50); }
+  .quick-item i { font-size: 22px; color: var(--blue-600); }
+  .quick-item span { font-size: 11px; color: var(--gray-600); text-align: center; }
+
+  /* ─── CHART PLACEHOLDER ─── */
+  .chart-area {
+    padding: 16px 20px 20px; height: 180px;
+    background: linear-gradient(180deg, #FAFCFF 0%, #fff 100%);
+    display: flex; align-items: flex-end; gap: 6px; position: relative;
+  }
+  .chart-bar-group { display: flex; gap: 2px; align-items: flex-end; flex: 1; }
+  .chart-bar { border-radius: 4px 4px 0 0; transition: opacity 0.15s; cursor: pointer; }
+  .chart-bar:hover { opacity: 0.8; }
+  .chart-bar.income { background: var(--blue-400); }
+  .chart-bar.expense { background: var(--gray-200); }
+  .chart-labels { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; }
+  .chart-month { font-size: 10px; color: var(--gray-400); text-align: center; flex: 1; }
+
+  /* ─── SCREEN TABS (portal switcher in content) ─── */
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid #E8EAF0; padding: 0 24px; background: #fff; }
+  .tab-item {
+    padding: 12px 16px; font-size: 13px; color: var(--gray-400); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+    transition: color 0.12s;
+  }
+  .tab-item:hover { color: var(--gray-800); }
+  .tab-item.active { color: var(--blue-800); font-weight: 500; border-bottom-color: var(--blue-600); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     TOPBAR
+════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon"><i class="ti ti-building-community" aria-hidden="true"></i></div>
+    <span class="logo-name">Sínd<span>App</span></span>
+  </div>
+
+  <div class="condo-selector">
+    <div class="condo-thumb"><i class="ti ti-building" aria-hidden="true"></i></div>
+    <span class="condo-name">Res. Vila das Flores</span>
+    <i class="ti ti-chevron-down" aria-hidden="true"></i>
+  </div>
+
+  <div class="topbar-search">
+    <i class="ti ti-search" aria-hidden="true"></i>
+    <input type="text" placeholder="Buscar unidades, moradores, boletos…">
+    <span style="font-size:11px; color:rgba(255,255,255,0.25); font-family:var(--mono); padding:2px 5px; border:1px solid rgba(255,255,255,0.15); border-radius:4px;">⌘K</span>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="topbar-btn" title="Ajuda"><i class="ti ti-help-circle" aria-hidden="true"></i></button>
+    <button class="topbar-btn" title="Notificações"><i class="ti ti-bell" aria-hidden="true"></i><span class="badge"></span></button>
+    <button class="topbar-btn" title="Chamados"><i class="ti ti-ticket" aria-hidden="true"></i></button>
+    <div class="avatar" title="Perfil">WS</div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════
+     APP BODY
+════════════════════════════════════════════════════════ -->
+<div class="app-body">
+
+  <!-- ── SIDEBAR ── -->
+  <nav class="sidebar" id="sidebar">
+
+    <div class="sidebar-portal-info">
+      <div class="portal-icon admin"><i class="ti ti-briefcase" aria-hidden="true"></i></div>
+      <div class="portal-info-text">
+        <div class="portal-label">Portal ativo</div>
+        <div class="portal-name">Administradora</div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="nav-section">
+      <a class="nav-item active" href="#dashboard">
+        <i class="ti ti-layout-dashboard" aria-hidden="true"></i>
+        <span class="nav-label">Dashboard</span>
+      </a>
+    </div>
+
+    <!-- Condomínios -->
+    <div class="nav-section">
+      <div class="nav-section-label">Condomínios</div>
+      <a class="nav-item" href="#condominios">
+        <i class="ti ti-building-community" aria-hidden="true"></i>
+        <span class="nav-label">Condomínios</span>
+      </a>
+      <a class="nav-item" href="#blocos">
+        <i class="ti ti-building" aria-hidden="true"></i>
+        <span class="nav-label">Blocos e Unidades</span>
+      </a>
+      <a class="nav-item" href="#moradores">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        <span class="nav-label">Moradores</span>
+      </a>
+      <a class="nav-item has-sub open" href="#" onclick="toggleSub(this,event)">
+        <i class="ti ti-file-text" aria-hidden="true"></i>
+        <span class="nav-label">Cadastros</span>
+        <i class="ti ti-chevron-right nav-chevron" aria-hidden="true"></i>
+      </a>
+      <div class="nav-sub open">
+        <div class="nav-sub-item">Categorias</div>
+        <div class="nav-sub-item active">Documentos</div>
+        <div class="nav-sub-item">Certificados Digitais</div>
+        <div class="nav-sub-item">Prestadores de Serviços</div>
+      </div>
+    </div>
+
+    <!-- Financeiro -->
+    <div class="nav-section">
+      <div class="nav-section-label">Financeiro</div>
+      <a class="nav-item" href="#rateio">
+        <i class="ti ti-calculator" aria-hidden="true"></i>
+        <span class="nav-label">Rateio</span>
+      </a>
+      <a class="nav-item" href="#pagar">
+        <i class="ti ti-credit-card" aria-hidden="true"></i>
+        <span class="nav-label">Contas a Pagar</span>
+      </a>
+      <a class="nav-item" href="#cobranca">
+        <i class="ti ti-file-invoice" aria-hidden="true"></i>
+        <span class="nav-label">Cobrança</span>
+        <span class="nav-badge">3</span>
+      </a>
+      <a class="nav-item" href="#conciliacao">
+        <i class="ti ti-arrows-exchange" aria-hidden="true"></i>
+        <span class="nav-label">Conciliação Bancária</span>
+      </a>
+      <a class="nav-item" href="#orcamento">
+        <i class="ti ti-chart-pie" aria-hidden="true"></i>
+        <span class="nav-label">Orçamento</span>
+      </a>
+      <a class="nav-item" href="#fechamento">
+        <i class="ti ti-lock-check" aria-hidden="true"></i>
+        <span class="nav-label">Fechamento</span>
+      </a>
+    </div>
+
+    <!-- Portal Condomínio -->
+    <div class="nav-section">
+      <div class="nav-section-label">Portal Condomínio</div>
+      <a class="nav-item" href="#comunicados">
+        <i class="ti ti-speakerphone" aria-hidden="true"></i>
+        <span class="nav-label">Comunicados</span>
+      </a>
+      <a class="nav-item" href="#ocorrencias">
+        <i class="ti ti-alert-circle" aria-hidden="true"></i>
+        <span class="nav-label">Ocorrências</span>
+        <span class="nav-badge">7</span>
+      </a>
+      <a class="nav-item" href="#reservas">
+        <i class="ti ti-calendar-event" aria-hidden="true"></i>
+        <span class="nav-label">Reservas</span>
+      </a>
+      <a class="nav-item" href="#portaria">
+        <i class="ti ti-door" aria-hidden="true"></i>
+        <span class="nav-label">Portaria</span>
+      </a>
+      <a class="nav-item" href="#chamados">
+        <i class="ti ti-headset" aria-hidden="true"></i>
+        <span class="nav-label">Chamados</span>
+      </a>
+    </div>
+
+    <!-- Tabelas -->
+    <div class="nav-section">
+      <div class="nav-section-label">Configurações</div>
+      <a class="nav-item" href="#tabelas">
+        <i class="ti ti-table" aria-hidden="true"></i>
+        <span class="nav-label">Tabelas</span>
+      </a>
+      <a class="nav-item" href="#filiais">
+        <i class="ti ti-git-branch" aria-hidden="true"></i>
+        <span class="nav-label">Filiais</span>
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="collapse-btn" onclick="toggleSidebar()">
+        <i class="ti ti-layout-sidebar-left-collapse" aria-hidden="true"></i>
+        <span>Recolher menu</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="main" id="main">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-bar">
+      <a href="#"><i class="ti ti-home" aria-hidden="true"></i></a>
+      <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      <a href="#">Administradora</a>
+      <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      <span class="current">Dashboard</span>
+    </div>
+
+    <!-- Portal Tabs -->
+    <div class="tab-bar">
+      <div class="tab-item">Master</div>
+      <div class="tab-item active">Administradora</div>
+      <div class="tab-item">Condomínio</div>
+      <div class="tab-item">Morador</div>
+      <div class="tab-item">Corretor</div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-title">Dashboard Administradora</div>
+        <div class="page-subtitle">Res. Vila das Flores · Junho 2025</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary"><i class="ti ti-download" style="font-size:15px" aria-hidden="true"></i> Exportar</button>
+        <button class="btn btn-primary"><i class="ti ti-plus" style="font-size:15px" aria-hidden="true"></i> Nova Cobrança</button>
+      </div>
+    </div>
+
+    <!-- Page Content -->
+    <div class="page-content">
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap blue"><i class="ti ti-home" aria-hidden="true"></i></div>
+          <div class="kpi-label">Total de Unidades</div>
+          <div class="kpi-value">248</div>
+          <div class="kpi-sub neutral"><i class="ti ti-building" style="font-size:12px" aria-hidden="true"></i> 4 blocos · 62 por bloco</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap teal"><i class="ti ti-currency-dollar" aria-hidden="true"></i></div>
+          <div class="kpi-label">Arrecadação Mensal</div>
+          <div class="kpi-value">R$ 87,4k</div>
+          <div class="kpi-sub up"><i class="ti ti-trending-up" style="font-size:12px" aria-hidden="true"></i> +3,2% vs mês anterior</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap amber"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div>
+          <div class="kpi-label">Inadimplência</div>
+          <div class="kpi-value">12,4%</div>
+          <div class="kpi-sub down"><i class="ti ti-trending-up" style="font-size:12px" aria-hidden="true"></i> +1,8% este mês</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap red"><i class="ti ti-ticket" aria-hidden="true"></i></div>
+          <div class="kpi-label">Chamados Abertos</div>
+          <div class="kpi-value">23</div>
+          <div class="kpi-sub neutral">7 urgentes · 16 normais</div>
+        </div>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="content-grid">
+
+        <!-- Main Card: Tabela de Inadimplentes -->
+        <div>
+          <div class="content-card" style="margin-bottom:16px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Unidades em Atraso</div>
+                <div class="card-subtitle">Cobrança de inadimplência · 31 registros</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px"><i class="ti ti-filter" style="font-size:14px" aria-hidden="true"></i> Filtrar</button>
+                <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">Ver todos</button>
+              </div>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Unidade</th>
+                  <th>Morador</th>
+                  <th>Vencimento</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>A-101</strong></td>
+                  <td>Carlos Mendonça</td>
+                  <td>05/05/2025</td>
+                  <td><strong>R$ 680,00</strong></td>
+                  <td><span class="status-badge vencido">Vencido</span></td>
+                  <td><button class="btn btn-ghost" style="padding:4px 8px;font-size:12px">Cobrar</button></td>
+                </tr>
+                <tr>
+                  <td><strong>B-203</strong></td>
+                  <td>Fernanda Lima</td>
+                  <td>05/05/2025</td>
+                  <td><strong>R$ 680,00</strong></td>
+                  <td><span class="status-badge vencido">Vencido</span></td>
+                  <td><button class="btn btn-ghost" style="padding:4px 8px;font-size:12px">Cobrar</button></td>
+                </tr>
+                <tr>
+                  <td><strong>C-305</strong></td>
+                  <td>Roberto Assis</td>
+                  <td>05/06/2025</td>
+                  <td><strong>R$ 680,00</strong></td>
+                  <td><span class="status-badge pendente">Pendente</span></td>
+                  <td><button class="btn btn-ghost" style="padding:4px 8px;font-size:12px">Cobrar</button></td>
+                </tr>
+                <tr>
+                  <td><strong>A-204</strong></td>
+                  <td>Tatiane Rocha</td>
+                  <td>05/06/2025</td>
+                  <td><strong>R$ 680,00</strong></td>
+                  <td><span class="status-badge pago">Pago</span></td>
+                  <td><button class="btn btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--gray-300)">—</button></td>
+                </tr>
+                <tr>
+                  <td><strong>D-102</strong></td>
+                  <td>Marcos Teixeira</td>
+                  <td>05/06/2025</td>
+                  <td><strong>R$ 680,00</strong></td>
+                  <td><span class="status-badge pendente">Pendente</span></td>
+                  <td><button class="btn btn-ghost" style="padding:4px 8px;font-size:12px">Cobrar</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Gráfico -->
+          <div class="content-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Receitas × Despesas</div>
+                <div class="card-subtitle">Últimos 6 meses</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--gray-400)">
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--blue-400);margin-right:4px"></span>Receitas</span>
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--gray-200);margin-right:4px"></span>Despesas</span>
+              </div>
+            </div>
+            <div class="chart-area" id="chart">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Acesso Rápido -->
+          <div class="content-card">
+            <div class="card-header">
+              <div class="card-title">Acesso Rápido</div>
+            </div>
+            <div class="quick-grid">
+              <div class="quick-item">
+                <i class="ti ti-calculator" aria-hidden="true"></i>
+                <span>Rateio Mensal</span>
+              </div>
+              <div class="quick-item">
+                <i class="ti ti-file-invoice" aria-hidden="true"></i>
+                <span>Emitir Boletos</span>
+              </div>
+              <div class="quick-item">
+                <i class="ti ti-arrows-exchange" aria-hidden="true"></i>
+                <span>Conciliação</span>
+              </div>
+              <div class="quick-item">
+                <i class="ti ti-speakerphone" aria-hidden="true"></i>
+                <span>Comunicado</span>
+              </div>
+              <div class="quick-item">
+                <i class="ti ti-report" aria-hidden="true"></i>
+                <span>Relatórios</span>
+              </div>
+              <div class="quick-item">
+                <i class="ti ti-settings" aria-hidden="true"></i>
+                <span>Configurações</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Atividade Recente -->
+          <div class="content-card" style="flex:1">
+            <div class="card-header">
+              <div class="card-title">Atividade Recente</div>
+              <a href="#" style="font-size:12px;color:var(--blue-600);text-decoration:none">Ver tudo</a>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-dot teal"></div>
+                <div>
+                  <div class="activity-text">Boleto quitado — unidade <strong>A-101</strong></div>
+                  <div class="activity-time">há 12 min</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot amber"></div>
+                <div>
+                  <div class="activity-text">Ocorrência aberta no bloco <strong>C</strong> — elevador</div>
+                  <div class="activity-time">há 35 min</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot blue"></div>
+                <div>
+                  <div class="activity-text">Reserva de salão confirmada — apt <strong>B-302</strong></div>
+                  <div class="activity-time">há 1h 20min</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot red"></div>
+                <div>
+                  <div class="activity-text">Inadimplência gerada — 3 novos atrasos</div>
+                  <div class="activity-time">há 3h</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot teal"></div>
+                <div>
+                  <div class="activity-text">Rateio mensal processado — <strong>248 unidades</strong></div>
+                  <div class="activity-time">ontem às 08:00</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot blue"></div>
+                <div>
+                  <div class="activity-text">Conciliação bancária concluída — Bradesco</div>
+                  <div class="activity-time">ontem às 17:42</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    const mn = document.getElementById('main');
+    sb.classList.toggle('collapsed');
+    mn.classList.toggle('sidebar-collapsed');
+  }
+  function toggleSub(el, e) {
+    e.preventDefault();
+    el.classList.toggle('open');
+    const sub = el.nextElementSibling;
+    if (sub && sub.classList.contains('nav-sub')) sub.classList.toggle('open');
+  }
+
+  // Nav item click
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      if (this.classList.contains('has-sub')) return;
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Chart
+  const chartEl = document.getElementById('chart');
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun'];
+  const income = [82000,84500,81200,86000,85800,87400];
+  const expense = [68000,70000,67500,71000,72000,73200];
+  const maxVal = Math.max(...income);
+  const h = 130;
+  let html = '';
+  months.forEach((m, i) => {
+    const incH = Math.round((income[i]/maxVal)*h);
+    const expH = Math.round((expense[i]/maxVal)*h);
+    html += `<div class="chart-bar-group"><div class="chart-bar income" style="height:${incH}px;flex:1" title="Receita ${m}: R$${(income[i]/1000).toFixed(1)}k"></div><div class="chart-bar expense" style="height:${expH}px;flex:1" title="Despesa ${m}: R$${(expense[i]/1000).toFixed(1)}k"></div></div>`;
+  });
+  html += `<div class="chart-labels">${months.map(m=>`<span class="chart-month">${m}</span>`).join('')}</div>`;
+  chartEl.innerHTML = html;
+</script>
+</body>
+</html>
