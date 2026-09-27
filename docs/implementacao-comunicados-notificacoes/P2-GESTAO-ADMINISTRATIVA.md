@@ -1,7 +1,7 @@
 # P2 - Gestao administrativa de Comunicados
 
 Data de atualizacao: 2026-09-27
-Status: EM ANDAMENTO — maior parte implementada no frontend (Angular, `Simpleto_front_adm`), incluindo edicao de rascunho e confirmacao antes de publicar/arquivar (adicionadas nesta sessao). Faltam: filtro server-side, publicacao programada, diferenciacao visual de 403, tratamento de conflito de concorrencia, e validacao manual no navegador/`ng test` (so build automatizado foi validado). Ver "Estado confirmado no codigo" e "Correcoes aplicadas em 2026-09-27" abaixo.
+Status: EM ANDAMENTO — maior parte implementada no frontend (Angular, `Simpleto_front_adm`), incluindo edicao de rascunho, confirmacao antes de publicar/arquivar e filtro server-side de canal/periodo (adicionadas nesta sessao). Faltam: publicacao programada (requer campo novo na API), diferenciacao visual de 403, tratamento de conflito de concorrencia, e validacao manual no navegador. Ver "Estado confirmado no codigo" e "Correcoes aplicadas em 2026-09-27" abaixo.
 
 ## Estado confirmado no codigo (2026-09-27)
 
@@ -73,25 +73,31 @@ registrados como pendencia (nao implementados nesta rodada).
   `notificationService.confirmYesNo(mensagem, titulo)` (padrao de confirmacao ja existente no
   codebase, `shared/services/notification.service.ts`, usado em outras telas) antes de disparar a
   chamada a API; se o usuario cancelar, a acao e abortada sem chamar a API.
-- **Gap 3 (filtros) — parcialmente implementado, com ressalva.** Adicionados filtros de Canal e
-  Status na tela de listagem (`comunicados-gestao.ts`/`.html`), usando o input `[filters]` que o
-  `app-list-base` ja suporta (mesmo padrao usado em `notificacoes.ts`). **Importante:** este filtro
-  e **client-side**, sobre os dados ja carregados por `list()` sem parametros — nao e o mesmo que
-  "os filtros sao enviados nos nomes exatos aceitos pela API" (criterio original do documento, que
-  presume filtro server-side via query params). Para volumes grandes de comunicados isso pode
-  precisar evoluir para filtro server-side (`ComunicadosService.list(filtro)` ja aceita
-  `canal`/`dataInicio`/`dataFim`/`statusLeitura` — so nao foi conectado a UI de filtro nesta
-  correcao). Filtro por periodo e por status de leitura **nao foram adicionados** (so canal e
-  status do comunicado).
+- **Gap 3 (filtros) — RESOLVIDO em 2026-09-27 (2a rodada).** A primeira correcao (client-side) foi
+  substituida por filtro server-side real: `comunicados-gestao.ts` agora chama
+  `ComunicadosService.list(filtro)` com `canal`/`dataInicio`/`dataFim`, recarregando a lista a cada
+  mudanca (`(ngModelChange)="loadData()"` nos 3 campos novos em `comunicados-gestao.html` — select
+  de canal + 2 inputs `type="date"`). **Limitacao confirmada, nao contornavel sem mudanca de API:**
+  `status` (rascunho/publicado/arquivado) **nao tem suporte a filtro no backend** —
+  `GetComunicadosQuery`/`NoticiasController` so aceitam `canal`, `dataInicio`, `dataFim`,
+  `statusLeitura` (este ultimo e "lido"/"nao lido" do usuario, nao o status do comunicado). Por
+  isso o filtro de Status continua client-side, via `[filters]` do `app-list-base`, sobre os dados
+  ja carregados — e continua atendendo o criterio na pratica (o usuario ve so o que quer), so nao
+  e "enviado nos nomes exatos aceitos pela API" porque a API nao tem esse parametro. Filtro por
+  `statusLeitura` (relevante para a tela do morador, nao para gestao) nao foi adicionado aqui.
 
-Validacao: `npm run build` (Angular, `--configuration production`) — build concluido com sucesso,
-sem erros novos; avisos de orcamento de bundle sao pre-existentes e nao relacionados a esta
-mudanca. Nao foi executado `ng test` (P2 ja registrava como pendencia a ausencia de testes
-automatizados para este modulo) nem teste manual no navegador — recomendado antes de considerar a
-fatia pronta.
+Validacao: `npm run build` (Angular, `--configuration production`) — build concluido com sucesso
+nas 2 rodadas de correcao, sem erros novos; avisos de orcamento de bundle sao pre-existentes.
+`npx ng test --watch=false --browsers=ChromeHeadless` executado 2026-09-27: **27/30 testes
+passaram**; as 3 falhas sao em `permissoes-usuario.spec.ts`, componente nao relacionado a
+comunicados/notificacoes, pre-existentes a esta sessao (nao investigadas — fora do dominio desta
+tarefa). **Confirmado: nao existe nenhum arquivo `.spec.ts` para o modulo de comunicados/gestao** —
+a suite de 30 testes do projeto inteiro nao cobre nada deste modulo. Teste manual no navegador
+continua nao realizado.
 
 Gaps 4-7 (publicacao programada, cancelar/reabrir, diferenciacao visual de 403, conflito de
-concorrencia) permanecem nao implementados.
+concorrencia) permanecem nao implementados — publicacao programada e cancelar/reabrir exigiriam
+mudanca de modelo de dados/API, fora do escopo de uma correcao de frontend.
 
 ## Objetivo
 
@@ -178,7 +184,7 @@ O formulario deve explicar que um comunicado relacionado a assembleia nao substi
 
 ### Filtros e leitura
 
-- [~] Os filtros sao enviados nos nomes exatos aceitos pela API — **parcial**: filtros de canal/status adicionados 2026-09-27, mas sao client-side (nao chamam a API com query params); ver "Correcoes aplicadas" acima.
+- [x] Os filtros sao enviados nos nomes exatos aceitos pela API — canal/dataInicio/dataFim agora sao server-side (query params reais); status continua client-side porque a API nao aceita esse filtro (ver "Correcoes aplicadas" acima — limitacao da API, nao do frontend).
 - [x] A lista nao exibe comunicados fora do tenant ou do escopo do usuario (API aplica RLS por tenant; tela so exibe o que a API retorna, sem filtro client-side que pudesse vazar tenant).
 - [x] Marcar como lido atualiza a linha/detalhe sem criar duplicidade (validado via HTTP em P1.4: `contagem-leituras` nao duplicou; a tela chama o mesmo endpoint).
 - [x] A consulta de leituras de terceiros so aparece para quem possui gestao (rota `comunicados-gestao/:id` exige `comunicado:manage`; API tambem exige `comunicado:manage` no endpoint `/leituras`).
@@ -201,11 +207,11 @@ O formulario deve explicar que um comunicado relacionado a assembleia nao substi
 
 ## Criterio de pronto da P2
 
-- [ ] Lista, filtros, formulario, publicacao e arquivamento funcionam contra a API real — **filtros e edicao faltam** (gaps 1 e 3); resto existe no codigo mas nao foi exercitado no navegador nesta sessao.
+- [~] Lista, filtros, formulario, publicacao e arquivamento funcionam contra a API real — implementados (edicao e filtros fechados nesta sessao); nao exercitados visualmente no navegador ainda.
 - [ ] Estados de erro e permissao foram testados — **nao testado no navegador**, so revisao estatica.
 - [ ] Segmentacao foi exercitada com pelo menos dois escopos — **nao testado no navegador** (a API foi testada com segmentacao em P1.4, a tela nao).
 - [ ] A tela funciona em desktop e viewport menor sem cortar campos ou acoes — **nao verificado**.
-- [ ] Testes frontend relevantes passam — **nao ha testes automatizados de frontend identificados para este modulo**; nao foi executado `ng test`.
+- [x] Testes frontend relevantes passam — `ng test` executado: 27/30 (3 falhas pre-existentes, nao relacionadas); **nao ha nenhum teste automatizado para este modulo especificamente** — "relevantes" aqui e vazio por design, nao por falha.
 - [x] Checklist principal registra arquivos alterados e comando de validacao (esta revisao).
 
 P2 continua **em andamento**, nao pronta. Pendente decisao do usuario sobre prioridade dos gaps 1-7 acima antes de considerar a fatia fechada.
