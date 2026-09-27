@@ -22,7 +22,7 @@ Data de atualizacao: 2026-09-27
 - [x] P1 — Base do modulo de comunicados/notificacoes (concluida, com ressalva: 403/isolamento cross-tenant nao testados por falta de segunda credencial — decisao do usuario foi avancar mesmo assim)
 - [~] P2 — Gestão administrativa do conteúdo (parcial — edição, confirmação e filtro server-side de canal/período implementados 2026-09-27; falta publicação programada (exige mudança de API) e teste no navegador — ver P2-GESTAO-ADMINISTRATIVA.md)
 - [~] P3 — Experiência do usuário final no portal/morador (parcial; achado de segurança em reenviar corrigido — ver P3-EXPERIENCIA-USUARIO-FINAL.md)
-- [ ] P4 — Integrações de canal e notificação
+- [~] P4 — Integrações de canal e notificação (achado 2026-09-27: e-mail e WhatsApp JA implementados e rodando via workers, de commits anteriores a esta sessão — item estava marcado errado como "não iniciado". Gaps reais: sem lock de concorrência multi-instância, segredo SMTP versionado, sem push/SMS — ver P4-INTEGRACOES-CANAIS.md)
 - [ ] P5 — Testes, segurança, observabilidade e release
 
 ## P0 — Concluído
@@ -92,19 +92,20 @@ Detalhamento: [P3-EXPERIENCIA-USUARIO-FINAL.md](docs/implementacao-comunicados-n
 - [~] Validar isolamento de tenant e escopo do usuario final — tenant ok; **achado de segurança corrigido**: reenviar agora checa posse (`DestinatarioId == UserId`, teste unitário cobrindo 403); `atualizar-status` segue sem checagem, decisão adiada para P4 (ver P3, "Achado de segurança")
 - [ ] Validar responsividade e acessibilidade — não verificado no navegador
 
-## P4 — Integracoes
+## P4 — Integracoes (parcial — e-mail e WhatsApp ja implementados, revisado 2026-09-27)
 
 Detalhamento: [P4-INTEGRACOES-CANAIS.md](docs/implementacao-comunicados-notificacoes/P4-INTEGRACOES-CANAIS.md)
 
-- [ ] E-mail
-- [ ] Push/alerta interno
-- [ ] WhatsApp/SMS, se necessário
-- [ ] Política de retry e fallback
-- [ ] Log de envio
-- [ ] Confirmar provedores e credenciais por ambiente
-- [ ] Implementar adapters isolados do dominio
-- [ ] Implementar worker/fila e idempotencia
-- [ ] Testar falhas transitorias, definitivas e callbacks duplicados
+- [x] E-mail — `EmailDispatchService` + `EmailDispatcherWorker`, via SMTP (`IEmailSenderService`)
+- [ ] Push/alerta interno — fora de escopo confirmado (so Portal, E-mail, WhatsApp)
+- [x] WhatsApp — `WhatsAppDispatchService` + `WhatsAppDispatcherWorker`, via OpenClaw (`IWhatsAppSender`); SMS fora de escopo
+- [x] Política de retry e fallback — 3 tentativas, backoff de 5min, status `falhou` apos esgotar
+- [x] Log de envio — `FalhaMotivo`/`Tentativas`/`UltimaTentativaEm` na tabela `notificacaocanal`
+- [x] Confirmar provedores e credenciais por ambiente — SMTP e OpenClaw ja configurados (mas ver gap de segredo abaixo)
+- [x] Implementar adapters isolados do dominio — `IEmailSenderService`, `IWhatsAppSender`
+- [~] Implementar worker/fila e idempotencia — worker roda (polling 30s sobre a tabela); idempotencia nao garantida com multiplas instancias (sem `FOR UPDATE SKIP LOCKED`)
+- [ ] Testar falhas transitorias, definitivas e callbacks duplicados — so testado com mocks unitarios (26/26 passando); sem teste de reentrega real/callback duplicado
+- [ ] **Gap de seguranca nao corrigido**: `Simpleto.Api/appsettings.json` tem senha SMTP em texto puro versionada no repo — viola "credenciais fora do repositorio"
 
 ## P5 — Qualidade e producao
 
