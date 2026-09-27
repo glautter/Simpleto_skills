@@ -123,14 +123,37 @@ Deve apresentar:
 - estado de leitura sem linguagem de aceite juridico;
 - acao de voltar sem perder filtros e posicao da lista.
 
-**Gap confirmado (2026-09-27): esta tela nao existe para o morador.** `ComunicadosLeituraComponent`
-so mostra `titulo`/`resumo` na lista e um botao "Confirmar leitura" — nao ha rota `comunicados/:id`
-nem qualquer forma de o morador ver `conteudo` completo, `avisoConvocatoriaFormal` ou imagem. O
-`ComunicadoDetalheComponent` que existe (`comunicados-gestao/comunicado-detalhe.ts`) e exclusivo do
-portal `condominio`, exige permissao `comunicado:manage` e mostra a lista de leituras — nao serve
-para o morador (mostraria dados administrativos que o morador nao deveria ver, e a rota nem esta
-registrada em `morador.routes.ts`). Precisa de um componente de detalhe novo, so-leitura, sem a
-secao de leituras administrativas.
+**Gap confirmado em 2026-09-27, CORRIGIDO na mesma sessao.** `ComunicadosLeituraComponent` so
+mostrava `titulo`/`resumo` na lista e um botao "Confirmar leitura" — nao havia rota `comunicados/:id`
+nem forma de o morador ver `conteudo` completo, `avisoConvocatoriaFormal` ou imagem. O
+`ComunicadoDetalheComponent` existente (`comunicados-gestao/comunicado-detalhe.ts`) e exclusivo do
+portal `condominio`, exige `comunicado:manage` e mostra a lista administrativa de leituras — nao
+servia para o morador.
+
+**Correcao aplicada:** criado `ComunicadoLeituraDetalheComponent`
+(`src/app/pages/condominio/comunicacao/comunicados/comunicado-leitura-detalhe.{ts,html,scss}`),
+so-leitura, sem secao de leituras de terceiros. Mostra titulo, canal, data de publicacao, imagem
+(se `caminhoImagem` existir), resumo, conteudo completo, aviso explicito de convocacao de
+assembleia (mesmo bloco condicional do `comunicado-detalhe.ts` administrativo) e um botao
+"Confirmar leitura" (com o mesmo dialog de confirmacao ja usado na lista, nao registra leitura
+automaticamente so por abrir a tela — decisao deliberada para nao rastrear leitura sem uma acao
+explicita do usuario). Botao "Voltar" usa `Location.back()` do Angular.
+
+Rota nova `comunicados/:id` registrada em **ambos** os portais (`condominio.routes.ts` e
+`morador.routes.ts`), com `permission: { recurso: 'comunicado', acao: 'read' }` — mesma permissao
+da listagem, nao a de gestao. `ComunicadosLeituraComponent::onAbrir(row)` navega com
+`this.router.navigate([row.id], { relativeTo: this.route })` (navegacao relativa, nao hardcoded a
+um portal — funciona tanto em `/layout/condominio/comunicados/:id` quanto em
+`/layout/morador/comunicados/:id` a partir do mesmo componente compartilhado).
+
+Validado com `npm run build` (Angular producao) — sucesso, sem erros novos. Nao testado
+manualmente no navegador.
+
+**Limitacao conhecida, nao resolvida:** o criterio "acao de voltar sem perder filtros e posicao da
+lista" nao esta garantido — `Location.back()` volta ao historico do navegador, mas o Angular
+recria o componente da lista do zero (sem `RouteReuseStrategy` customizada), entao os filtros
+locais (`canal`, `search`, `apenasNaoLidos`) resetam. Resolver isso exigiria uma estrategia de
+reuso de rota ou persistir o filtro em query params — fora do escopo desta correcao pontual.
 
 ## Notificacoes
 
@@ -155,7 +178,7 @@ O sino/central de notificacoes deve informar canal, data, status e origem de for
 
 ### Leitura
 
-- [~] Abrir detalhe registra leitura para o usuario correto — **nao ha "abrir detalhe"** (gap acima); a leitura e confirmada direto na lista via `marcarComoLido`, que registra o usuario correto (validado via HTTP em P1.4).
+- [x] Abrir detalhe registra leitura para o usuario correto — tela de detalhe criada 2026-09-27 (`ComunicadoLeituraDetalheComponent`); leitura e confirmada por acao explicita (nao automatica ao abrir), via `marcarComoLido`, que registra o usuario correto (validado via HTTP em P1.4).
 - [x] Reabrir nao cria duplicidade (validado via HTTP em P1.4 — `contagem-leituras` nao duplicou ao confirmar leitura duas vezes).
 - [x] A tela nao afirma que leitura equivale a ciencia formal (texto e "Confirmar leitura", sem linguagem juridica).
 - [x] Um morador nao consegue consultar a leitura de outro morador (endpoint `/leituras` exige `comunicado:manage`; a tela do morador nem chama esse endpoint).
@@ -184,7 +207,7 @@ O sino/central de notificacoes deve informar canal, data, status e origem de for
 
 ## Criterio de pronto da P3
 
-- [ ] Jornada de lista, detalhe e leitura funciona no canal escolhido — **falta a tela de detalhe** (gap confirmado).
+- [~] Jornada de lista, detalhe e leitura funciona no canal escolhido — tela de detalhe criada 2026-09-27; **nao testada manualmente no navegador ainda** (so build automatizado).
 - [~] Isolamento de tenant e autorizacao foram testados — tenant ok; **autorizacao por usuario (ownership) corrigida para reenviar** (teste unitario); `PUT .../status` segue sem checagem, decisao adiada para P4.
 - [ ] Estados vazio, carregando, erro, nao lido, lido e falha foram validados — parcial, ver checkboxes acima; falta teste manual no navegador.
 - [ ] Responsividade e acessibilidade foram verificadas em desktop e mobile — nao verificado.

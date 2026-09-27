@@ -84,7 +84,7 @@ Detalhamento: [P3-EXPERIENCIA-USUARIO-FINAL.md](docs/implementacao-comunicados-n
 
 - [x] Listagem para moradores/usuários (`ComunicadosLeituraComponent`, reaproveitado nos portais condominio/morador)
 - [x] Indicador de comunicado novo (coluna "Leitura" + cards de contagem nao-lidos/lidos)
-- [ ] Visualização detalhada — **nao existe** rota `comunicados/:id` para o morador (gap confirmado)
+- [x] Visualização detalhada — implementada 2026-09-27 (`ComunicadoLeituraDetalheComponent`, rota `comunicados/:id` nos dois portais), não testada manualmente no navegador
 - [x] Leitura/confirmar visualização, se houver regra (`marcarComoLido`, com dialog de confirmação, validado em P1.4)
 - [ ] Organização por prioridade ou categoria — nao ha campo de prioridade na entidade
 - [x] Confirmar qual frontend/portal hospeda a experiencia do morador — resolvido: mesmo app, portal `morador`
