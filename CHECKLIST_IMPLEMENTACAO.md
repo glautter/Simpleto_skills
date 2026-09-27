@@ -144,9 +144,10 @@ Detalhamento: [P5-QUALIDADE-SEGURANCA-OPERACAO.md](docs/implementacao-comunicado
 Pendencias que impedem marcar P1 100% concluida:
 
 - [x] P1.2: bug de `to_regclass` no bloco de auditoria de V071 corrigido via `V121__fix_comunicado_notificacao_audit_trigger_check.sql`, aplicada no Supabase alvo com autorizacao do usuario. 5 triggers de auditoria confirmados (`information_schema.triggers`, 15 linhas = 5 tabelas x 3 eventos).
-- [ ] P1.3 (nao executada): cenarios de autorizacao/tenant via HTTP (401/403/isolamento) precisam de usuario autenticado real ou ambiente de teste com token — nao executados nesta sessao.
-- [ ] P1.4 (nao executada): fluxos funcionais via HTTP (criar/editar/publicar/arquivar comunicado, registrar/reenviar notificacao) — mesma dependencia de autenticacao do P1.3.
-- Novo achado: a premissa "P2/P3 nao iniciadas" estava errada — ja existem telas reais de gestao (P2) e leitura no portal do morador (P3). Essas secoes precisam ser revisadas item a item antes de assumir o que falta.
+- [x] P1.4: fluxos funcionais via HTTP validados com usuario de teste real (`admin.hml@simpleto.local`) contra API local apontando pro Supabase alvo — CRUD de comunicado, transicoes de status, filtros, leitura idempotente, registro/reenvio/status de notificacao. Achado: `POST /notificacoes` e `.../reenviar` retornam `Canais[].Id`/`DestinatarioId` zerados (bug de mapeamento, dado no banco esta correto) — registrado em P1.4, nao corrigido ainda.
+- [~] P1.3 (parcial): 401 sem token e escopo por tenant confirmados. 403 (permissao insuficiente) e isolamento cross-tenant **nao testados** — so havia uma credencial `TenantMasterAdmin` de um unico tenant.
+- Novo achado (ja incorporado): a premissa "P2/P3 nao iniciadas" estava errada — ja existem telas reais de gestao (P2) e leitura no portal do morador (P3). Essas secoes precisam ser revisadas item a item antes de assumir o que falta.
+- Novo achado 2026-09-27: bug de mapeamento no DTO de resposta de `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` (ver P1.4) — nao bloqueia P1, mas precisa ser resolvido antes de P4.
 
 ## Observação
 

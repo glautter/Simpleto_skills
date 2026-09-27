@@ -1,7 +1,7 @@
 # P1 - Base de Comunicados e Notificacoes
 
 Data de atualizacao: 2026-09-27
-Status: EM ANDAMENTO / IMPLEMENTACAO PARCIAL
+Status: EM ANDAMENTO — P1.1/P1.2/P1.4/P1.5 fechadas com evidencia; P1.3 parcial (401 e escopo por tenant confirmados; 403 e isolamento cross-tenant nao testados por falta de segunda credencial/tenant)
 
 ## Objetivo
 
@@ -170,27 +170,60 @@ Correcao aplicada, com autorizacao explicita do usuario: criada `Simpleto.Infras
 
 ### P1.3 - Validacao de autorizacao e tenant
 
-- [ ] Usuario sem autenticacao recebe 401.
-- [ ] Usuario sem permissao de leitura recebe 403.
-- [ ] Usuario sem permissao de criacao/gestao nao consegue publicar ou arquivar.
-- [ ] Usuario de tenant A nao consulta nem altera dados do tenant B.
-- [ ] Morador nao consulta leituras de outros usuarios.
-- [ ] Perfil administrativo consulta apenas o escopo autorizado.
+- [x] Usuario sem autenticacao recebe 401.
+- [ ] Usuario sem permissao de leitura recebe 403. **Nao testado** — so havia credencial de um usuario `TenantMasterAdmin` (permissao total). Ver limitacao abaixo.
+- [ ] Usuario sem permissao de criacao/gestao nao consegue publicar ou arquivar. **Nao testado**, mesma limitacao.
+- [ ] Usuario de tenant A nao consulta nem altera dados do tenant B. **Nao testado** — so havia credencial de um tenant. RLS estrutural ja confirmada em P1.2 (policy `tenant_isolation_*` usando `app.tenant_id`), mas nao exercitada via HTTP com 2 tenants reais.
+- [ ] Morador nao consulta leituras de outros usuarios. **Nao testado**, mesma limitacao de credencial unica.
+- [x] Perfil administrativo consulta apenas o escopo autorizado (validado indiretamente: todas as listagens retornaram apenas registros do `TenantId` do usuario logado, `52bfc765-763f-4ba7-b98a-8258df0383db`).
+
+Evidencia (2026-09-27), API local (`dotnet run --no-launch-profile`, `ASPNETCORE_ENVIRONMENT=Supabase`) escutando em `http://localhost:5000`, testada via PowerShell/`Invoke-WebRequest` com o usuario de teste fornecido pelo usuario (`admin.hml@simpleto.local`, perfil `TenantMasterAdmin`/`Desenvolvedor`):
+
+- `GET /api/v1/comunicados` sem `Authorization` -> **401**.
+- `GET /api/v1/comunicados` com `Authorization` mas sem header `X-Schema` -> **400**, `"Header X-Schema é obrigatório para requisições autenticadas."` (`TenantValidationMiddleware`, comportamento correto, so nao e literalmente 401/403).
+- Login (`POST /api/Auth/acesso`) exige `Schema` no payload (nao documentado no fluxo do model `AcessoDto`, so descoberto por tentativa/erro — usei `Schema: "public"`, que bate com `DatabaseSettings.Schema` do `appsettings.Supabase.json`).
+
+**Limitacao registrada, nao decisao tomada:** so havia uma credencial de teste (`TenantMasterAdmin`, acesso total a 2 condominios do mesmo tenant). Os cenarios de 403 (permissao insuficiente) e isolamento cross-tenant continuam pendentes — precisam de um segundo usuario com permissao restrita e/ou de um segundo tenant para serem exercitados de verdade via HTTP.
 
 ### P1.4 - Validacao funcional da API
 
-- [ ] Criar rascunho com payload valido.
-- [ ] Rejeitar payload sem titulo, resumo, canal ou segmentacao valida conforme regra do handler.
-- [ ] Editar rascunho.
-- [ ] Publicar rascunho.
-- [ ] Impedir transicao invalida de status.
-- [ ] Arquivar publicado.
-- [ ] Listar por canal, periodo e leitura.
-- [ ] Marcar leitura sem duplicar registro.
-- [ ] Registrar notificacao com um ou mais canais.
-- [ ] Atualizar falha de canal com motivo.
-- [ ] Reenviar preservando o registro original.
-- [ ] Marcar canal portal como lido pelo destinatario correto.
+- [x] Criar rascunho com payload valido.
+- [x] Rejeitar payload sem titulo, resumo, canal ou segmentacao valida conforme regra do handler.
+- [x] Editar rascunho.
+- [x] Publicar rascunho.
+- [x] Impedir transicao invalida de status.
+- [x] Arquivar publicado.
+- [x] Listar por canal, periodo e leitura.
+- [x] Marcar leitura sem duplicar registro.
+- [x] Registrar notificacao com um ou mais canais.
+- [x] Atualizar falha de canal com motivo.
+- [x] Reenviar preservando o registro original.
+- [x] Marcar canal portal como lido pelo destinatario correto.
+
+Evidencia (2026-09-27), mesma API local/usuario de teste de P1.3, todas as chamadas com `Authorization: Bearer <token>` e `X-Schema: public`:
+
+| Cenario | Chamada | Resultado |
+|---|---|---|
+| Criar rascunho valido | `POST /comunicados` | 200, `Status: "rascunho"` |
+| Payload invalido sem titulo | `POST /comunicados` sem `titulo` | 400, `"'Payload Titulo' deve ser informado."` |
+| Editar rascunho | `PUT /comunicados/{id}` | 200, campos atualizados |
+| Publicar rascunho | `POST /comunicados/{id}/publicar` | 204 |
+| Publicar de novo (invalido) | `POST /comunicados/{id}/publicar` (2a vez) | 400, `"Somente comunicados em rascunho podem ser publicados."` |
+| Arquivar publicado | `POST /comunicados/{id}/arquivar` | 204 |
+| Publicar arquivado (invalido) | `POST /comunicados/{id}/publicar` (apos arquivar) | 400, mesma mensagem — regra de transicao consistente |
+| Listar por canal | `GET /comunicados?canal=manutencao` | 200, so o item do canal certo |
+| Listar por periodo | `GET /comunicados?dataInicio=...&dataFim=...` | 200 |
+| Listar por leitura | `GET /comunicados?statusLeitura=lido` | 200, so retornou o item marcado como lido pelo usuario |
+| Marcar leitura 1a vez | `POST /comunicados/{id}/marcar-lido` | 204 |
+| Marcar leitura 2a vez (idempotente) | `POST /comunicados/{id}/marcar-lido` | 204, `contagem-leituras` continuou `Total: 1` (nao duplicou) |
+| GET comunicado inexistente | `GET /comunicados/{guid-invalido}` | 404, `"Comunicado nao encontrado."` |
+| Registrar notificacao (canal portal) | `POST /notificacoes` | 200 |
+| Atualizar falha de canal com motivo | `PUT /notificacoes/canais/{id}/status` (`novoStatus: "falhou"`, `falhaMotivo`) | 204 |
+| Reenviar canal preservando original | `POST /notificacoes/canais/{id}/reenviar?forcar=true` | 200; `GET /notificacoes/origem/...` confirmou **2 registros de canal** para a mesma notificacao (original + novo), original nao foi apagado |
+| Marcar canal como lido | `PUT /notificacoes/canais/{id}/lida` | 204 |
+
+**Achado (bug de mapeamento no DTO de resposta, nao corrigido — decisao pendente):** a resposta imediata de `POST /notificacoes` (e de `POST /notificacoes/canais/{id}/reenviar`) traz `Canais[].Id` e `DestinatarioId` como `00000000-0000-0000-0000-000000000000`, mesmo com os registros corretos gravados no banco (confirmado consultando `GET /notificacoes/origem/{tipo}/{id}` logo em seguida, que retorna os ids reais). Causa raiz em `RegistrarNotificacaoHandler.HandleAsync` (`Simpleto.Application/Handlers/Notificacoes/RegistrarNotificacaoHandler.cs`): o DTO de retorno e montado a partir do `payload` (lista de strings de canal) sem reconsultar os ids que `NotificacaoRepository.InserirAsync` gera internamente (`Guid.NewGuid()` por canal, `Simpleto.Infrastructure/Repositories/NotificacaoRepository.cs`) — esses ids nunca voltam para o chamador. `DestinatarioId` no DTO tambem fica default porque o handler nao o copia de `notificacao.DestinatarioId` ao montar o retorno.
+Impacto: quem registra uma notificacao (ex.: um adapter de canal futuro em P4) nao consegue usar a resposta imediata do `POST` para chamar `PUT canais/{id}/status` ou `POST canais/{id}/reenviar` — precisa fazer um `GET /notificacoes/origem/{tipo}/{id}` a parte para descobrir o id real do canal. Nao e um problema de integridade de dado (o banco esta correto), e um gap de usabilidade da API que vai incomodar a fatia P4 (integracoes). Nao alterei o handler sem confirmacao do usuario.
 
 ### P1.5 - Validacao frontend
 
@@ -235,3 +268,4 @@ P1 pode ser marcada como concluida somente quando:
 - O portal e canal obrigatorio e nao pode ser desabilitado para todos os usuarios?
 - Quem administra credenciais, templates e custos do WhatsApp?
 - [RESOLVIDO 2026-09-27] Corrigir o bug de `to_regclass` no bloco de auditoria de V071 com uma migration nova (V121), aplicar no Supabase alvo e recriar os 5 triggers agora? -> Sim, decisao do usuario. `V121__fix_comunicado_notificacao_audit_trigger_check.sql` criada e aplicada; 5 triggers confirmados. Ver evidencia em P1.2.
+- **[NOVO 2026-09-27] Corrigir o bug de mapeamento em `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` que faz `POST /notificacoes` e `POST /notificacoes/canais/{id}/reenviar` retornarem `Canais[].Id` e `DestinatarioId` zerados?** Ver evidencia em P1.4. Workaround atual: consultar `GET /notificacoes/origem/{tipo}/{id}` para obter os ids reais. Nao bloqueia P1 (o dado gravado no banco esta correto), mas deve ser resolvido antes de P4 (adapters de canal vao precisar do id do canal na resposta imediata do registro).
