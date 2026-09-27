@@ -1,7 +1,7 @@
 # P2 - Gestao administrativa de Comunicados
 
 Data de atualizacao: 2026-09-27
-Status: EM ANDAMENTO — parte substancial ja implementada no frontend (Angular, `Simpleto_front_adm`), mas com gaps reais confirmados por leitura de codigo (nao houve validacao visual/E2E na tela ainda, so revisao estatica). Ver "Estado confirmado no codigo" abaixo.
+Status: EM ANDAMENTO — maior parte implementada no frontend (Angular, `Simpleto_front_adm`), incluindo edicao de rascunho e confirmacao antes de publicar/arquivar (adicionadas nesta sessao). Faltam: filtro server-side, publicacao programada, diferenciacao visual de 403, tratamento de conflito de concorrencia, e validacao manual no navegador/`ng test` (so build automatizado foi validado). Ver "Estado confirmado no codigo" e "Correcoes aplicadas em 2026-09-27" abaixo.
 
 ## Estado confirmado no codigo (2026-09-27)
 
@@ -54,6 +54,44 @@ Revisao estatica dos arquivos em `src/app/pages/condominio/comunicacao/comunicad
 
 Nenhum destes gaps foi corrigido nesta sessao — ficaram documentados para decisao/priorizacao do
 usuario, e a revisao foi so estatica (leitura de codigo), sem rodar a tela no navegador.
+
+## Correcoes aplicadas em 2026-09-27 (mesma sessao, apos decisao do usuario)
+
+Decisao do usuario: implementar os gaps 1 e 2 (edicao + confirmacao) agora; gaps 3-7 ficam
+registrados como pendencia (nao implementados nesta rodada).
+
+- **Gap 1 (edicao de rascunho) — implementado.** `ComunicadoDetalheComponent` ganhou um botao
+  "Editar" (visivel so quando `podeEditar()` = status `rascunho`), que abre o mesmo
+  `ComunicadoFormDialogComponent` ja usado para criacao, agora pre-preenchido com os dados do
+  comunicado (`data.initial = this.comunicado`). `ComunicadoFormComponent.onSalvar()` passou a
+  incluir `id` no payload quando `initialData?.id` existe, tornando o tipo emitido
+  `CreateComunicadoPayload | UpdateComunicadoPayload`. Um novo metodo privado
+  `salvarEdicao()` chama `ComunicadosService.update(...)` (endpoint `PUT /comunicados/{id}`, ja
+  existia no service, so nao era usado).
+- **Gap 2 (confirmacao antes de publicar/arquivar) — implementado.** `publicar()`/`arquivar()` em
+  `comunicado-detalhe.ts` agora sao `async` e chamam
+  `notificationService.confirmYesNo(mensagem, titulo)` (padrao de confirmacao ja existente no
+  codebase, `shared/services/notification.service.ts`, usado em outras telas) antes de disparar a
+  chamada a API; se o usuario cancelar, a acao e abortada sem chamar a API.
+- **Gap 3 (filtros) — parcialmente implementado, com ressalva.** Adicionados filtros de Canal e
+  Status na tela de listagem (`comunicados-gestao.ts`/`.html`), usando o input `[filters]` que o
+  `app-list-base` ja suporta (mesmo padrao usado em `notificacoes.ts`). **Importante:** este filtro
+  e **client-side**, sobre os dados ja carregados por `list()` sem parametros — nao e o mesmo que
+  "os filtros sao enviados nos nomes exatos aceitos pela API" (criterio original do documento, que
+  presume filtro server-side via query params). Para volumes grandes de comunicados isso pode
+  precisar evoluir para filtro server-side (`ComunicadosService.list(filtro)` ja aceita
+  `canal`/`dataInicio`/`dataFim`/`statusLeitura` — so nao foi conectado a UI de filtro nesta
+  correcao). Filtro por periodo e por status de leitura **nao foram adicionados** (so canal e
+  status do comunicado).
+
+Validacao: `npm run build` (Angular, `--configuration production`) — build concluido com sucesso,
+sem erros novos; avisos de orcamento de bundle sao pre-existentes e nao relacionados a esta
+mudanca. Nao foi executado `ng test` (P2 ja registrava como pendencia a ausencia de testes
+automatizados para este modulo) nem teste manual no navegador — recomendado antes de considerar a
+fatia pronta.
+
+Gaps 4-7 (publicacao programada, cancelar/reabrir, diferenciacao visual de 403, conflito de
+concorrencia) permanecem nao implementados.
 
 ## Objetivo
 
@@ -126,21 +164,21 @@ O formulario deve explicar que um comunicado relacionado a assembleia nao substi
 
 - [x] Com permissao de criacao, o usuario consegue salvar um rascunho valido (`ComunicadoFormComponent` + `ComunicadosService.create`).
 - [x] Campos invalidos impedem o envio e mostram o erro no campo correspondente (`CrudFormComponent`, campos `required`).
-- [ ] Ao editar, o id da rota nao pode ser substituido por id informado em outro campo — **N/A, edicao nao existe na UI ainda** (gap 1 acima).
+- [x] Ao editar, o id da rota nao pode ser substituido por id informado em outro campo — implementado 2026-09-27: `salvarEdicao()` forca `id: this.comunicadoId` (da rota) no payload enviado, ignorando qualquer `id` que viesse do formulario.
 - [x] Sem permissao, a API rejeita a operacao e a tela nao informa sucesso falso (todo `subscribe` tem `error` callback com `notificationService.error`, nenhum assume sucesso).
 - [x] Apos salvar, a tela mostra o status real retornado pela API (`loadData()`/`loadAll()` recarrega da API apos cada mutacao, nao atualiza estado local otimisticamente).
 
 ### Publicar e arquivar
 
 - [x] Publicar exige permissao de gestao (rota `comunicados-gestao/:id` com `permission: { recurso: 'comunicado', acao: 'manage' }`; API tambem exige `comunicado:manage`).
-- [ ] A tela pede confirmacao antes da publicacao — **gap 2 acima, nao implementado.**
-- [x] Apos publicar, o botao de editar respeita a regra real do backend — **N/A, nao ha botao de editar ainda**, mas os botoes Publicar/Arquivar seguem `podePublicar()`/`podeArquivar()` corretamente.
-- [ ] Arquivar exige confirmacao e atualiza a lista sem apagar o historico — confirmacao **nao implementada** (gap 2); atualizacao sem apagar historico esta ok (arquivar so muda status).
+- [x] A tela pede confirmacao antes da publicacao — implementado 2026-09-27 (`notificationService.confirmYesNo`).
+- [x] Apos publicar, o botao de editar respeita a regra real do backend — `podeEditar()` = status `rascunho`, some assim que o status muda para `publicado`/`arquivado` (mesma fonte de verdade, `this.comunicado.status` vindo da API).
+- [x] Arquivar exige confirmacao e atualiza a lista sem apagar o historico — confirmacao implementada 2026-09-27; atualizacao sem apagar historico ja estava ok (arquivar so muda status).
 - [x] O aviso de convocacao aparece quando aplicavel (`comunicado-detalhe.html`, bloco `@if (comunicado.envolveConvocacaoAssembleia && comunicado.avisoConvocatoriaFormal)`).
 
 ### Filtros e leitura
 
-- [ ] Os filtros sao enviados nos nomes exatos aceitos pela API — **N/A, filtros nao existem nesta tela** (gap 3 acima; o service `ComunicadosService.list()` aceita filtro, so nao e usado pela tela de gestao).
+- [~] Os filtros sao enviados nos nomes exatos aceitos pela API — **parcial**: filtros de canal/status adicionados 2026-09-27, mas sao client-side (nao chamam a API com query params); ver "Correcoes aplicadas" acima.
 - [x] A lista nao exibe comunicados fora do tenant ou do escopo do usuario (API aplica RLS por tenant; tela so exibe o que a API retorna, sem filtro client-side que pudesse vazar tenant).
 - [x] Marcar como lido atualiza a linha/detalhe sem criar duplicidade (validado via HTTP em P1.4: `contagem-leituras` nao duplicou; a tela chama o mesmo endpoint).
 - [x] A consulta de leituras de terceiros so aparece para quem possui gestao (rota `comunicados-gestao/:id` exige `comunicado:manage`; API tambem exige `comunicado:manage` no endpoint `/leituras`).

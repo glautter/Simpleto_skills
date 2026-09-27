@@ -20,7 +20,7 @@ Data de atualizacao: 2026-09-27
 - [x] P0 — Modal de “Últimas atualizações” com linguagem natural para usuário final
 - [x] P0 — Build validado com sucesso no frontend
 - [x] P1 — Base do modulo de comunicados/notificacoes (concluida, com ressalva: 403/isolamento cross-tenant nao testados por falta de segunda credencial — decisao do usuario foi avancar mesmo assim)
-- [~] P2 — Gestão administrativa do conteúdo (parcial — ver P2-GESTAO-ADMINISTRATIVA.md: listagem/criação/publicar/arquivar/leituras existem, mas faltam edição, confirmação e filtros)
+- [~] P2 — Gestão administrativa do conteúdo (parcial — edição e confirmação implementadas 2026-09-27; faltam filtro server-side, publicação programada e testes no navegador — ver P2-GESTAO-ADMINISTRATIVA.md)
 - [ ] P3 — Experiência do usuário final no portal/morador
 - [ ] P4 — Integrações de canal e notificação
 - [ ] P5 — Testes, segurança, observabilidade e release
@@ -66,16 +66,17 @@ Estado confirmado no repositorio:
 - [x] Validar build/testes do backend apos a implementacao documentada
 - [x] Validar telas frontend contra os endpoints reais (servicos e telas reais confirmados; ver P1.5 no documento P1)
 
-## P2 — Gestao administrativa (parcial — revisao de codigo feita em 2026-09-27, sem rodar a tela no navegador)
+## P2 — Gestao administrativa (parcial — revisao de codigo + correcoes em 2026-09-27, sem teste manual no navegador)
 
 Detalhamento: [P2-GESTAO-ADMINISTRATIVA.md](docs/implementacao-comunicados-notificacoes/P2-GESTAO-ADMINISTRATIVA.md)
 
 - [x] Tela de listagem de comunicados (`ComunicadosGestaoComponent`, rota `comunicados-gestao`)
-- [ ] Filtros por categoria, status e período — **nao implementado nesta tela** (componente de lista suporta, mas nao foi configurado aqui)
-- [~] Criação/edição de comunicado — **so criação existe**; nao ha UI para editar um rascunho (`ComunicadosService.update()` sem uso no frontend)
+- [~] Filtros por categoria, status e período — filtro de canal/status adicionado (client-side); falta período e falta virar server-side
+- [x] Criação/edição de comunicado — edição implementada 2026-09-27 (botão "Editar" no detalhe, reaproveitando o formulário; `ComunicadosService.update()` agora é usado)
 - [ ] Publicação programada — nao existe (nem na API)
 - [~] Visualização de histórico e alterações — lista de leituras existe; log de alteracoes/auditoria nao aparece na UI
-- [~] Ações de arquivar, cancelar e reabrir — arquivar existe (sem dialog de confirmação); cancelar/reabrir não existem, e não correspondem ao ciclo de vida real da API (`rascunho -> publicado -> arquivado`)
+- [x] Ações de arquivar (com confirmação, implementada 2026-09-27); cancelar/reabrir não existem — nao correspondem ao ciclo de vida real da API (`rascunho -> publicado -> arquivado`)
+- Validado com `npm run build` (Angular production) — sucesso, sem erros novos. `ng test` e teste manual no navegador ainda pendentes.
 
 ## P3 — Experiencia do usuario final
 
