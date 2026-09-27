@@ -21,7 +21,7 @@ Data de atualizacao: 2026-09-27
 - [x] P0 — Build validado com sucesso no frontend
 - [x] P1 — Base do modulo de comunicados/notificacoes (concluida, com ressalva: 403/isolamento cross-tenant nao testados por falta de segunda credencial — decisao do usuario foi avancar mesmo assim)
 - [~] P2 — Gestão administrativa do conteúdo (parcial — edição e confirmação implementadas 2026-09-27; faltam filtro server-side, publicação programada e testes no navegador — ver P2-GESTAO-ADMINISTRATIVA.md)
-- [ ] P3 — Experiência do usuário final no portal/morador
+- [~] P3 — Experiência do usuário final no portal/morador (parcial; achado de segurança pendente — ver P3-EXPERIENCIA-USUARIO-FINAL.md)
 - [ ] P4 — Integrações de canal e notificação
 - [ ] P5 — Testes, segurança, observabilidade e release
 
@@ -82,15 +82,15 @@ Detalhamento: [P2-GESTAO-ADMINISTRATIVA.md](docs/implementacao-comunicados-notif
 
 Detalhamento: [P3-EXPERIENCIA-USUARIO-FINAL.md](docs/implementacao-comunicados-notificacoes/P3-EXPERIENCIA-USUARIO-FINAL.md)
 
-- [ ] Listagem para moradores/usuários
-- [ ] Indicador de comunicado novo
-- [ ] Visualização detalhada
-- [ ] Leitura/confirmar visualização, se houver regra
-- [ ] Organização por prioridade ou categoria
-- [ ] Confirmar qual frontend/portal hospeda a experiencia do morador
-- [ ] Validar estados vazio, carregando, erro, lido e nao lido
-- [ ] Validar isolamento de tenant e escopo do usuario final
-- [ ] Validar responsividade e acessibilidade
+- [x] Listagem para moradores/usuários (`ComunicadosLeituraComponent`, reaproveitado nos portais condominio/morador)
+- [x] Indicador de comunicado novo (coluna "Leitura" + cards de contagem nao-lidos/lidos)
+- [ ] Visualização detalhada — **nao existe** rota `comunicados/:id` para o morador (gap confirmado)
+- [x] Leitura/confirmar visualização, se houver regra (`marcarComoLido`, com dialog de confirmação, validado em P1.4)
+- [ ] Organização por prioridade ou categoria — nao ha campo de prioridade na entidade
+- [x] Confirmar qual frontend/portal hospeda a experiencia do morador — resolvido: mesmo app, portal `morador`
+- [~] Validar estados vazio, carregando, erro, lido e nao lido — parcial, so revisão de código
+- [~] Validar isolamento de tenant e escopo do usuario final — tenant ok; **achado de segurança**: reenviar/atualizar-status de notificação não checam posse do usuário (ver P3, "Achado de segurança") — decisão pendente
+- [ ] Validar responsividade e acessibilidade — não verificado no navegador
 
 ## P4 — Integracoes
 
