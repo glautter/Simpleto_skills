@@ -19,7 +19,7 @@ Data de atualizacao: 2026-09-27
 - [x] P0 — Indicador de versão visível no app shell
 - [x] P0 — Modal de “Últimas atualizações” com linguagem natural para usuário final
 - [x] P0 — Build validado com sucesso no frontend
-- [~] P1 — Base do modulo de comunicados/notificacoes (parcialmente implementada)
+- [x] P1 — Base do modulo de comunicados/notificacoes (concluida, com ressalva: 403/isolamento cross-tenant nao testados por falta de segunda credencial — decisao do usuario foi avancar mesmo assim)
 - [ ] P2 — Gestão administrativa do conteúdo
 - [ ] P3 — Experiência do usuário final no portal/morador
 - [ ] P4 — Integrações de canal e notificação
@@ -32,7 +32,7 @@ Data de atualizacao: 2026-09-27
 - [x] Conteúdo escrito em linguagem simples para o usuário final
 - [x] Build do projeto validado com sucesso
 
-## P1 — Em andamento
+## P1 — Concluida (com ressalva)
 
 ### Objetivo
 Implementar e validar a base funcional do modulo de comunicados/notificacoes, antes de avancar para a experiencia do usuario final.
@@ -131,8 +131,8 @@ Detalhamento: [P5-QUALIDADE-SEGURANCA-OPERACAO.md](docs/implementacao-comunicado
 
 ## Regra de avanco
 
-- [ ] P0 concluído antes de P1
-- [ ] P1 concluído antes de P2
+- [x] P0 concluído antes de P1
+- [x] P1 concluído antes de P2 (com ressalva de P1.3 documentada)
 - [ ] P2 concluído antes de P3
 - [ ] P3 concluído antes de P4
 - [ ] P4 concluído antes de P5
@@ -140,14 +140,16 @@ Detalhamento: [P5-QUALIDADE-SEGURANCA-OPERACAO.md](docs/implementacao-comunicado
 ## Proximo passo recomendado
 
 - [x] Fechar a validacao da P1: rodar testes/build do backend, confirmar migration aplicada no ambiente alvo e verificar a integracao das telas frontend com `/api/v1/comunicados` e `/api/v1/notificacoes`. (2026-09-27, evidencia completa em P1.1/P1.2/P1.5 no documento P1)
+- [ ] Avancar para P2 (Gestao administrativa): revisar item a item o que ja existe no frontend (`comunicados-gestao`, `comunicado-detalhe`, `notificacoes-config` — ver P1.5) contra o escopo de [P2-GESTAO-ADMINISTRATIVA.md](docs/implementacao-comunicados-notificacoes/P2-GESTAO-ADMINISTRATIVA.md), em vez de assumir que nada foi feito.
 
-Pendencias que impedem marcar P1 100% concluida:
+P1 fechada em 2026-09-27. Resumo do que foi corrigido/validado nesta sessao:
 
-- [x] P1.2: bug de `to_regclass` no bloco de auditoria de V071 corrigido via `V121__fix_comunicado_notificacao_audit_trigger_check.sql`, aplicada no Supabase alvo com autorizacao do usuario. 5 triggers de auditoria confirmados (`information_schema.triggers`, 15 linhas = 5 tabelas x 3 eventos).
-- [x] P1.4: fluxos funcionais via HTTP validados com usuario de teste real (`admin.hml@simpleto.local`) contra API local apontando pro Supabase alvo — CRUD de comunicado, transicoes de status, filtros, leitura idempotente, registro/reenvio/status de notificacao. Achado: `POST /notificacoes` e `.../reenviar` retornam `Canais[].Id`/`DestinatarioId` zerados (bug de mapeamento, dado no banco esta correto) — registrado em P1.4, nao corrigido ainda.
-- [~] P1.3 (parcial): 401 sem token e escopo por tenant confirmados. 403 (permissao insuficiente) e isolamento cross-tenant **nao testados** — so havia uma credencial `TenantMasterAdmin` de um unico tenant.
-- Novo achado (ja incorporado): a premissa "P2/P3 nao iniciadas" estava errada — ja existem telas reais de gestao (P2) e leitura no portal do morador (P3). Essas secoes precisam ser revisadas item a item antes de assumir o que falta.
-- Novo achado 2026-09-27: bug de mapeamento no DTO de resposta de `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` (ver P1.4) — nao bloqueia P1, mas precisa ser resolvido antes de P4.
+- [x] P1.1: build/testes do backend (636/636 aprovados).
+- [x] P1.2: bug de `to_regclass` no bloco de auditoria de V071 corrigido via `V121__fix_comunicado_notificacao_audit_trigger_check.sql`, aplicada no Supabase alvo. 5 triggers de auditoria confirmados (`information_schema.triggers`, 15 linhas = 5 tabelas x 3 eventos).
+- [x] P1.4: fluxos funcionais via HTTP validados com usuario de teste real (`admin.hml@simpleto.local`) contra API local apontando pro Supabase alvo — CRUD de comunicado, transicoes de status, filtros, leitura idempotente, registro/reenvio/status de notificacao.
+- [x] Bug de mapeamento no DTO de resposta de `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` (`Canais[].Id`/`DestinatarioId` zerados) corrigido, testado (636/636) e validado via HTTP.
+- [x] P1.5: telas reais de gestao/leitura confirmadas no frontend (nao stub) — corrige a premissa antiga de que P2/P3 "nao tinham nada".
+- [~] P1.3 (ressalva aceita, nao bloqueante): 401 sem token e escopo por tenant confirmados. 403 (permissao insuficiente) e isolamento cross-tenant **nao testados** — so havia uma credencial `TenantMasterAdmin` de um unico tenant. Decisao do usuario: seguir para P2 mesmo assim; revisitar quando houver uma segunda credencial/tenant de teste.
 
 ## Observação
 

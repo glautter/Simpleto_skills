@@ -1,7 +1,7 @@
 # P1 - Base de Comunicados e Notificacoes
 
 Data de atualizacao: 2026-09-27
-Status: EM ANDAMENTO — P1.1/P1.2/P1.4/P1.5 fechadas com evidencia; P1.3 parcial (401 e escopo por tenant confirmados; 403 e isolamento cross-tenant nao testados por falta de segunda credencial/tenant)
+Status: CONCLUIDA (com ressalva) — P1.1/P1.2/P1.4/P1.5 fechadas com evidencia; P1.3 parcial (401 e escopo por tenant confirmados; 403 e isolamento cross-tenant nao testados por falta de segunda credencial/tenant — decisao do usuario foi fechar P1 mesmo assim e revisar isso quando houver credencial disponivel, sem bloquear o avanco para P2)
 
 ## Objetivo
 
@@ -222,8 +222,17 @@ Evidencia (2026-09-27), mesma API local/usuario de teste de P1.3, todas as chama
 | Reenviar canal preservando original | `POST /notificacoes/canais/{id}/reenviar?forcar=true` | 200; `GET /notificacoes/origem/...` confirmou **2 registros de canal** para a mesma notificacao (original + novo), original nao foi apagado |
 | Marcar canal como lido | `PUT /notificacoes/canais/{id}/lida` | 204 |
 
-**Achado (bug de mapeamento no DTO de resposta, nao corrigido — decisao pendente):** a resposta imediata de `POST /notificacoes` (e de `POST /notificacoes/canais/{id}/reenviar`) traz `Canais[].Id` e `DestinatarioId` como `00000000-0000-0000-0000-000000000000`, mesmo com os registros corretos gravados no banco (confirmado consultando `GET /notificacoes/origem/{tipo}/{id}` logo em seguida, que retorna os ids reais). Causa raiz em `RegistrarNotificacaoHandler.HandleAsync` (`Simpleto.Application/Handlers/Notificacoes/RegistrarNotificacaoHandler.cs`): o DTO de retorno e montado a partir do `payload` (lista de strings de canal) sem reconsultar os ids que `NotificacaoRepository.InserirAsync` gera internamente (`Guid.NewGuid()` por canal, `Simpleto.Infrastructure/Repositories/NotificacaoRepository.cs`) — esses ids nunca voltam para o chamador. `DestinatarioId` no DTO tambem fica default porque o handler nao o copia de `notificacao.DestinatarioId` ao montar o retorno.
-Impacto: quem registra uma notificacao (ex.: um adapter de canal futuro em P4) nao consegue usar a resposta imediata do `POST` para chamar `PUT canais/{id}/status` ou `POST canais/{id}/reenviar` — precisa fazer um `GET /notificacoes/origem/{tipo}/{id}` a parte para descobrir o id real do canal. Nao e um problema de integridade de dado (o banco esta correto), e um gap de usabilidade da API que vai incomodar a fatia P4 (integracoes). Nao alterei o handler sem confirmacao do usuario.
+**Achado (bug de mapeamento no DTO de resposta) — CORRIGIDO em 2026-09-27:** a resposta imediata de `POST /notificacoes` (e de `POST /notificacoes/canais/{id}/reenviar`) trazia `Canais[].Id` e `DestinatarioId` como `00000000-0000-0000-0000-000000000000`, mesmo com os registros corretos gravados no banco (confirmado consultando `GET /notificacoes/origem/{tipo}/{id}` logo em seguida, que retornava os ids reais). Causa raiz em `RegistrarNotificacaoHandler.HandleAsync` (`Simpleto.Application/Handlers/Notificacoes/RegistrarNotificacaoHandler.cs`): o DTO de retorno era montado a partir do `payload` (lista de strings de canal) sem reconsultar os ids que `NotificacaoRepository.InserirAsync` gerava internamente (`Guid.NewGuid()` por canal, `Simpleto.Infrastructure/Repositories/NotificacaoRepository.cs`) — esses ids nunca voltavam para o chamador. `DestinatarioId` no DTO tambem ficava default porque o handler nao o copiava de `notificacao.DestinatarioId` ao montar o retorno.
+
+Correcao aplicada, com autorizacao do usuario:
+- `INotificacaoRepository.InserirAsync` (`Simpleto.Domain/Interfaces/INotificacaoRepository.cs`) mudou de `Task<Guid>` para `Task<IReadOnlyList<NotificacaoCanalDto>>` — o repositorio agora gera os ids dos canais *antes* do insert (em vez de dentro da projecao Dapper) e devolve a lista completa (`Id`, `Canal`, `Status`, `Tentativas`) para o chamador. `notificacao.Id` continua disponivel direto no objeto `Notificacao` (o handler ja seta esse id antes de chamar `InserirAsync`), entao nao precisou virar tupla.
+- `RegistrarNotificacaoHandler` e `ReenviarNotificacaoCanalHandler` passaram a usar a lista de canais retornada e a copiar `DestinatarioId` da entidade `Notificacao` para o DTO de resposta.
+- Os 6 outros chamadores de `InserirAsync` (consumers de eventos: `OrcamentoNotificacaoConsumer`, `ComunicadoPublicadoNotificacaoConsumer`, `CobrancaVencendoConsumer`, `CentralChamadoNotificacaoConsumer`, `AssembleiaConvocadaNotificacaoConsumer`) so faziam `await` sem capturar o retorno — a troca de tipo nao quebrou nenhum deles.
+- 2 testes (`ReenviarNotificacaoCanalHandlerTests`) que mockavam `InserirAsync` retornando `Guid` foram atualizados para retornar `List<NotificacaoCanalDto>`, com asserts novos conferindo que `Id`/`DestinatarioId` vem preenchidos.
+- Build: 0 erros, 0 avisos. Testes: `636/636` aprovados (mesma suíte de P1.1).
+- Validado via HTTP: `POST /notificacoes` com 2 canais (`portal`, `email`) retornou `DestinatarioId` correto e um `Id` real (nao zerado) para cada canal.
+
+Nota: o build precisou de intervencao para destravar um processo `Simpleto.Api.exe` orfao (sobra de uma sessao anterior de `dotnet run` desta mesma tarefa, nao do Visual Studio do usuario) que travava a copia das DLLs — o usuario autorizou encerrar o processo especifico antes de reexecutar o build.
 
 ### P1.5 - Validacao frontend
 
@@ -268,4 +277,4 @@ P1 pode ser marcada como concluida somente quando:
 - O portal e canal obrigatorio e nao pode ser desabilitado para todos os usuarios?
 - Quem administra credenciais, templates e custos do WhatsApp?
 - [RESOLVIDO 2026-09-27] Corrigir o bug de `to_regclass` no bloco de auditoria de V071 com uma migration nova (V121), aplicar no Supabase alvo e recriar os 5 triggers agora? -> Sim, decisao do usuario. `V121__fix_comunicado_notificacao_audit_trigger_check.sql` criada e aplicada; 5 triggers confirmados. Ver evidencia em P1.2.
-- **[NOVO 2026-09-27] Corrigir o bug de mapeamento em `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` que faz `POST /notificacoes` e `POST /notificacoes/canais/{id}/reenviar` retornarem `Canais[].Id` e `DestinatarioId` zerados?** Ver evidencia em P1.4. Workaround atual: consultar `GET /notificacoes/origem/{tipo}/{id}` para obter os ids reais. Nao bloqueia P1 (o dado gravado no banco esta correto), mas deve ser resolvido antes de P4 (adapters de canal vao precisar do id do canal na resposta imediata do registro).
+- [RESOLVIDO 2026-09-27] Corrigir o bug de mapeamento em `RegistrarNotificacaoHandler`/`ReenviarNotificacaoCanalHandler` que fazia `POST /notificacoes` e `POST /notificacoes/canais/{id}/reenviar` retornarem `Canais[].Id` e `DestinatarioId` zerados? -> Sim, decisao do usuario. Corrigido, testado (636/636) e validado via HTTP. Ver evidencia em P1.4.
