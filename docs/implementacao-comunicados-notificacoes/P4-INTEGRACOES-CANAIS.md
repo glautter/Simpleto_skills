@@ -21,7 +21,7 @@ Componentes confirmados no codigo:
 
 ### Gaps reais identificados nesta revisao (nao resolvidos ainda)
 
-1. **Sem lock de concorrencia na fila** (`ObterPendentesDisparoEmailAsync`/`ObterPendentesDisparoAsync` nao usam `FOR UPDATE SKIP LOCKED`): se mais de uma instancia da API rodar o worker simultaneamente, duas instancias podem pegar o mesmo registro pendente e enviar duplicado antes que o status seja atualizado. Nao e um problema em ambiente single-instance (hml atual), mas bloqueia producao multi-instancia sem correcao.
+1. ~~Sem lock de concorrencia na fila~~ **CORRIGIDO 2026-09-27**: `ObterPendentesDisparoEmailAsync`/`ObterPendentesDisparoAsync` reescritas para claim atomico via CTE `FOR UPDATE SKIP LOCKED` + `UPDATE ... RETURNING` (status passa a `enviando` no momento do claim, antes do processamento). Evita que duas instancias do worker peguem a mesma linha. Validado: `dotnet test --filter "FullyQualifiedName~DispatchService|FullyQualifiedName~Notificacao"` — 26/26 aprovados; SQL das duas variantes (canal fixo `email` e canal parametrizado `whatsapp`) executado contra o Supabase alvo dentro de uma transacao com `ROLLBACK` explicito (nada persistido) — sem erro de sintaxe/execucao. Arquivo: `Simpleto.Infrastructure/Repositories/NotificacaoRepository.cs`.
 2. **Segredo SMTP versionado**: `Simpleto.Api/appsettings.json` contem uma senha de app do Gmail em texto puro (achado ja registrado no inicio desta sessao, nunca resolvido) — viola diretamente o criterio "Credenciais ficam fora do repositorio" desta pagina. Recomendacao mantida: revogar a senha e mover para user-secrets/variavel de ambiente.
 3. **Push/SMS**: fora de escopo confirmado (ver secao "Push/SMS" abaixo) — nao implementado, nao deve ser implementado sem decisao de escopo.
 4. Nenhum teste de idempotencia com reentrega real foi executado (so unitario, mockando o sender) — nao ha evidencia de teste de callback duplicado ou webhook (o WhatsApp via OpenClaw parece ser round-trip sincrono, nao callback assincrono — a confirmar).
@@ -115,7 +115,7 @@ Os numeros de tentativas e os intervalos ainda sao decisao operacional; registra
 ## Criterios de aceite
 
 - [x] Evento interno cria uma notificacao sem bloquear a transacao principal (worker assincrono via polling, nao bloqueia o request que originou a notificacao).
-- [~] Cada canal habilitado cria no maximo um envio idempotente para o mesmo evento/destinatario — vale para instancia unica; sem `FOR UPDATE SKIP LOCKED` nao ha garantia com multiplas instancias do worker (gap 1 acima).
+- [x] Cada canal habilitado cria no maximo um envio idempotente para o mesmo evento/destinatario — claim atomico via `FOR UPDATE SKIP LOCKED` corrigido 2026-09-27 (gap 1 acima).
 - [ ] Canal desabilitado ou sem opt-in nao e enviado e fica com motivo rastreavel — nao ha modelo de opt-in/preferencia de canal ainda.
 - [x] Sucesso do provedor atualiza status e timestamps (`AtualizarStatusCanalAsync`, `EnviadaEm`).
 - [x] Falha transitoria agenda retry com limite (backoff 5min, ate 3 tentativas).
