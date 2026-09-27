@@ -1,7 +1,7 @@
 # P3 - Experiencia do usuario final
 
 Data de atualizacao: 2026-09-27
-Status: EM ANDAMENTO — parte substancial ja implementada (`ComunicadosLeituraComponent` e `NotificacoesComponent`, ambos reaproveitados nos portais `condominio` e `morador` do mesmo app Angular). Gaps de UI e um **achado de seguranca no backend** (autorizacao ausente em 2 endpoints) documentados abaixo — ver "Achado de seguranca".
+Status: EM ANDAMENTO — parte substancial ja implementada (`ComunicadosLeituraComponent` e `NotificacoesComponent`, ambos reaproveitados nos portais `condominio` e `morador` do mesmo app Angular). **Achado de seguranca em `reenviar` corrigido nesta sessao** (ownership check); `atualizar-status` fica pendente para P4. Falta a tela de detalhe do comunicado e teste manual no navegador. Ver "Achado de seguranca" abaixo.
 
 ## Objetivo
 
@@ -27,7 +27,7 @@ componente, reaproveitado nos dois portais). Nao ha app separado nem outro front
   usuario (portal nao pode ser desabilitado, conforme regra do documento), botao "Reenviar" para
   canais com status `falhou`.
 
-## Achado de seguranca (2026-09-27) — decisao pendente, nao corrigido
+## Achado de seguranca (2026-09-27) — reenviar CORRIGIDO; atualizar-status segue pendente
 
 Revisando o fluxo de "Reenviar" exposto ao morador, encontrei que **2 dos 5 endpoints de canal de
 notificacao nao verificam posse (ownership)** antes de agir — diferente do quinto, que faz isso
@@ -58,24 +58,30 @@ disponivel para qualquer morador") e com a premissa geral de isolamento por usua
 problema de isolamento de tenant (RLS/tenant_id continuam corretos) — e um problema de autorizacao
 por registro (IDOR) dentro do mesmo tenant.
 
-**Por que nao corrigi sem perguntar:** a correcao certa depende de uma decisao de produto que nao
-esta escrita em lugar nenhum do repositorio:
-1. `PUT .../status` e descrito no proprio comentario do handler como "chamado pelo adapter de
-   canal" — ou seja, parece pensado para ser uma chamada *backend-to-backend* (o worker de
-   disparo real, quando existir em P4), nao uma chamada de usuario final. Hoje nao existe uma
-   permissao RBAC `notificacao:*` no sistema (conferido na lista de permissions do JWT de teste em
-   P1.3/P1.4 — so existe `comunicado:*`), entao restringir esse endpoint exigiria criar uma
-   permissao nova ou um mecanismo de autenticacao servico-a-servico, o que e decisao de
-   arquitetura, nao correcao pontual.
-2. `POST .../reenviar` pode fazer sentido tanto como autoatendimento do proprio destinatario
-   (adicionar checagem de posse, igual `MarcarComoLida`) quanto como acao administrativa (exigir
-   uma permissao nova de gestao) — o documento sugere a segunda leitura, mas isso muda quem pode
-   usar o botao "Reenviar" que hoje aparece pra qualquer usuario (inclusive morador) no
-   `NotificacoesComponent`.
+**Decisao do usuario (2026-09-27):** `POST .../reenviar` e autoatendimento do proprio destinatario
+(retry de uma notificacao que falhou pra ele), nao acao administrativa — mesma semantica de
+`MarcarComoLida`. `PUT .../status` fica como decisao separada, pois e descrito no proprio
+comentario do handler como "chamado pelo adapter de canal" (uso futuro backend-to-backend em P4,
+nao usuario final) — nao ha permissao RBAC `notificacao:*` no sistema hoje (so `comunicado:*`),
+entao restringi-lo exigiria criar uma permissao nova ou um mecanismo de autenticacao
+servico-a-servico, decisao de arquitetura maior, deixada para quando P4 (adapters reais) for
+desenhada.
 
-Nenhuma alteracao de codigo foi feita para este achado. Fica registrado como pendencia de alta
-prioridade para decisao do usuario antes de considerar P3 (ou mesmo P1, ja que o endpoint e do
-nucleo N1) pronta para producao.
+**Correcao aplicada:** `ReenviarNotificacaoCanalHandler` agora verifica
+`contexto.DestinatarioId == _userContext.UserId.Value` antes de reenviar, retornando `Forbidden`
+(403) caso contrario — mesmo padrao ja usado em `MarcarNotificacaoCanalComoLidaHandler`. Novo teste
+`HandleAsync_ShouldReturnForbidden_WhenCanalBelongsToAnotherUser` adicionado em
+`ReenviarNotificacaoCanalHandlerTests.cs`; os 3 testes de sucesso existentes foram ajustados para
+alinhar `DestinatarioId` com o `UserId` mockado (antes eram Guids aleatorios nao relacionados, o
+que so passava porque nao havia checagem de posse). Build: 0 erros. Testes: `637/637` aprovados
+(1 a mais que a suite anterior). Validado via HTTP: reenvio da propria notificacao continua
+funcionando (200), sem regressao — **nao foi possivel testar o caminho 403 via HTTP nesta sessao**
+por falta de uma segunda credencial de outro usuario (mesma limitacao ja registrada em P1.3); o
+caminho esta coberto pelo teste unitario.
+
+**Nao corrigido nesta sessao:** `PUT .../status` continua sem checagem de posse/permissao —
+decisao explicitamente adiada pelo usuario para quando P4 (adapters de canal) definir o mecanismo
+de autenticacao servico-a-servico.
 
 ## Perfil e contexto otimizado
 
@@ -159,7 +165,7 @@ O sino/central de notificacoes deve informar canal, data, status e origem de for
 - [x] Portal mostra somente notificacoes destinadas ao usuario (`GET /notificacoes/minhas` filtra por `DestinatarioId` do usuario autenticado no backend).
 - [x] Status de falha e pendencia e compreensivel (`STATUS_NOTIFICACAO_CANAL_LABELS`, coluna dedicada).
 - [x] Marcar como lida altera apenas o registro do usuario autenticado (`MarcarNotificacaoCanalComoLidaHandler` confere `DestinatarioId == UserId`, ver P1.4).
-- [ ] Reenvio e acao administrativa, nao uma acao disponivel para qualquer morador — **NAO ATENDIDO.** Ver "Achado de seguranca" acima: nem a API nem a tela restringem quem pode reenviar; qualquer usuario autenticado do tenant ve e pode acionar o botao "Reenviar" para qualquer canal com status `falhou`, inclusive de outro usuario.
+- [x] Reenvio e restrito ao proprio destinatario (decisao do usuario: autoatendimento, nao acao administrativa — criterio original do documento foi superado por essa decisao). Corrigido 2026-09-27: `ReenviarNotificacaoCanalHandler` agora exige `DestinatarioId == UserId`, com teste cobrindo o caso 403.
 
 ### Acessibilidade e clareza
 
@@ -179,7 +185,7 @@ O sino/central de notificacoes deve informar canal, data, status e origem de for
 ## Criterio de pronto da P3
 
 - [ ] Jornada de lista, detalhe e leitura funciona no canal escolhido — **falta a tela de detalhe** (gap confirmado).
-- [~] Isolamento de tenant e autorizacao foram testados — tenant ok; **autorizacao por usuario (ownership) falhou** para reenviar/atualizar-status (achado de seguranca).
+- [~] Isolamento de tenant e autorizacao foram testados — tenant ok; **autorizacao por usuario (ownership) corrigida para reenviar** (teste unitario); `PUT .../status` segue sem checagem, decisao adiada para P4.
 - [ ] Estados vazio, carregando, erro, nao lido, lido e falha foram validados — parcial, ver checkboxes acima; falta teste manual no navegador.
 - [ ] Responsividade e acessibilidade foram verificadas em desktop e mobile — nao verificado.
 - [ ] Testes frontend e pelo menos um fluxo integrado passam — nao ha testes automatizados identificados para este modulo.
@@ -196,4 +202,4 @@ pronto.
 - O usuario pode arquivar ou apenas marcar como lido? -> Pelo estado atual do backend, so marcar como lido; arquivar e acao de gestao (`comunicado:manage`), nao do morador.
 - Existe prioridade formal ou apenas data/categoria? -> Nao ha campo de prioridade na entidade `Comunicado` (confirmado em P1) nem na tela.
 - O historico tem politica de retencao diferente da comunicacao ativa? -> Sem decisao registrada.
-- **[NOVO 2026-09-27] Reenviar/atualizar-status de notificacao devem exigir posse (destinatario) como `MarcarComoLida`, ou virar acao administrativa com permissao nova?** Ver "Achado de seguranca" acima — decisao humana pendente antes de corrigir.
+- [RESOLVIDO 2026-09-27] Reenviar/atualizar-status de notificacao devem exigir posse (destinatario) como `MarcarComoLida`, ou virar acao administrativa com permissao nova? -> Reenviar: posse (implementado). Atualizar-status: decisao adiada para P4 (endpoint pensado para adapter futuro).

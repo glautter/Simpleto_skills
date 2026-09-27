@@ -21,7 +21,7 @@ Data de atualizacao: 2026-09-27
 - [x] P0 — Build validado com sucesso no frontend
 - [x] P1 — Base do modulo de comunicados/notificacoes (concluida, com ressalva: 403/isolamento cross-tenant nao testados por falta de segunda credencial — decisao do usuario foi avancar mesmo assim)
 - [~] P2 — Gestão administrativa do conteúdo (parcial — edição e confirmação implementadas 2026-09-27; faltam filtro server-side, publicação programada e testes no navegador — ver P2-GESTAO-ADMINISTRATIVA.md)
-- [~] P3 — Experiência do usuário final no portal/morador (parcial; achado de segurança pendente — ver P3-EXPERIENCIA-USUARIO-FINAL.md)
+- [~] P3 — Experiência do usuário final no portal/morador (parcial; achado de segurança em reenviar corrigido — ver P3-EXPERIENCIA-USUARIO-FINAL.md)
 - [ ] P4 — Integrações de canal e notificação
 - [ ] P5 — Testes, segurança, observabilidade e release
 
@@ -89,7 +89,7 @@ Detalhamento: [P3-EXPERIENCIA-USUARIO-FINAL.md](docs/implementacao-comunicados-n
 - [ ] Organização por prioridade ou categoria — nao ha campo de prioridade na entidade
 - [x] Confirmar qual frontend/portal hospeda a experiencia do morador — resolvido: mesmo app, portal `morador`
 - [~] Validar estados vazio, carregando, erro, lido e nao lido — parcial, so revisão de código
-- [~] Validar isolamento de tenant e escopo do usuario final — tenant ok; **achado de segurança**: reenviar/atualizar-status de notificação não checam posse do usuário (ver P3, "Achado de segurança") — decisão pendente
+- [~] Validar isolamento de tenant e escopo do usuario final — tenant ok; **achado de segurança corrigido**: reenviar agora checa posse (`DestinatarioId == UserId`, teste unitário cobrindo 403); `atualizar-status` segue sem checagem, decisão adiada para P4 (ver P3, "Achado de segurança")
 - [ ] Validar responsividade e acessibilidade — não verificado no navegador
 
 ## P4 — Integracoes
