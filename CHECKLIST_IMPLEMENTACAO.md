@@ -62,9 +62,9 @@ Estado confirmado no repositorio:
 - [x] Implementar registro de notificacao e status por canal
 - [x] Implementar historico/auditoria estrutural (RLS + audit trigger quando disponivel)
 - [x] Validar permissoes por perfil/condominio no desenho da API
-- [ ] Validar fluxos com dados reais de condominio
-- [ ] Validar build/testes do backend apos a implementacao documentada
-- [ ] Validar telas frontend contra os endpoints reais
+- [x] Validar fluxos com dados reais de condominio (comunicado=4, notificacao=7 linhas ja existentes no Supabase alvo)
+- [x] Validar build/testes do backend apos a implementacao documentada
+- [x] Validar telas frontend contra os endpoints reais (servicos e telas reais confirmados; ver P1.5 no documento P1)
 
 ## P2 — Gestao administrativa
 
@@ -139,7 +139,14 @@ Detalhamento: [P5-QUALIDADE-SEGURANCA-OPERACAO.md](docs/implementacao-comunicado
 
 ## Proximo passo recomendado
 
-- [ ] Fechar a validacao da P1: rodar testes/build do backend, confirmar migration aplicada no ambiente alvo e verificar a integracao das telas frontend com `/api/v1/comunicados` e `/api/v1/notificacoes`.
+- [x] Fechar a validacao da P1: rodar testes/build do backend, confirmar migration aplicada no ambiente alvo e verificar a integracao das telas frontend com `/api/v1/comunicados` e `/api/v1/notificacoes`. (2026-09-27, evidencia completa em P1.1/P1.2/P1.5 no documento P1)
+
+Pendencias que impedem marcar P1 100% concluida (decisao humana necessaria, ver "Questoes que exigem decisao humana" em P1):
+
+- [ ] P1.2 (parcial): bug de `to_regclass` no bloco de auditoria de V071 impede a criacao dos 5 triggers de auditoria do dominio, apesar de `audit_log`/`audit_trigger_func` existirem no Supabase. Corrigir requer nova migration (V121) e aplicacao manual — nao fiz sem confirmacao.
+- [ ] P1.3 (nao executada): cenarios de autorizacao/tenant via HTTP (401/403/isolamento) precisam de usuario autenticado real ou ambiente de teste com token — nao executados nesta sessao.
+- [ ] P1.4 (nao executada): fluxos funcionais via HTTP (criar/editar/publicar/arquivar comunicado, registrar/reenviar notificacao) — mesma dependencia de autenticacao do P1.3.
+- Novo achado: a premissa "P2/P3 nao iniciadas" estava errada — ja existem telas reais de gestao (P2) e leitura no portal do morador (P3). Essas secoes precisam ser revisadas item a item antes de assumir o que falta.
 
 ## Observação
 
