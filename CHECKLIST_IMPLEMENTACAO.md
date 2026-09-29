@@ -23,7 +23,7 @@ Data de atualizacao: 2026-09-27
 - [~] P2 — Gestão administrativa do conteúdo (parcial — edição, confirmação e filtro server-side de canal/período implementados 2026-09-27; falta publicação programada (exige mudança de API) e teste no navegador — ver P2-GESTAO-ADMINISTRATIVA.md)
 - [~] P3 — Experiência do usuário final no portal/morador (parcial; achado de segurança em reenviar corrigido — ver P3-EXPERIENCIA-USUARIO-FINAL.md)
 - [~] P4 — Integrações de canal e notificação (achado 2026-09-27: e-mail e WhatsApp JA implementados e rodando via workers, de commits anteriores a esta sessão — item estava marcado errado como "não iniciado". Corrigido 2026-09-27: claim atômico com `FOR UPDATE SKIP LOCKED` para evitar envio duplicado multi-instância. Gaps restantes: segredo SMTP versionado, sem push/SMS, sem teste de callback duplicado real — ver P4-INTEGRACOES-CANAIS.md)
-- [ ] P5 — Testes, segurança, observabilidade e release
+- [~] P5 — Testes, segurança, observabilidade e release (2026-09-29: achado e corrigido gap real de RBAC — `NotificacoesController` não tinha nenhuma policy por endpoint; corrigido com migration `V122` + policies no controller, validado via HTTP real. Gaps registrados e não resolvidos: segredo SMTP versionado, CI/CD/observabilidade/alertas dependem de decisão de infraestrutura — ver P5-QUALIDADE-SEGURANCA-OPERACAO.md)
 
 ## P0 — Concluído
 
