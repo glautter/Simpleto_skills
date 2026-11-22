@@ -289,3 +289,43 @@ Notas da Fase 0:
 - Guia de recolhimento: valor calculado no servidor (`GuiaRecolhimentoRepository.SomarRetencoesAsync`); competência valida mês 01–12.
 - `CondominioAdministradora.CondominioId int`: **não alterado** — entidade legada (migração FluentMigrator SQL Server), sem uso no fluxo Postgres.
 - Também corrigido: recurso `notificacao` ausente em `PermissionPoliciesConfiguration` (teste de cobertura voltou a passar; 637/637).
+
+---
+
+## 6. Backlog (o que ficou de fora das Fases 0–9)
+
+Consolidado em 2026-11-22. Retomar a partir de 2026-11-23.
+
+### A. Aguardando insumo do usuário
+
+| # | Item | O que falta | Destrava |
+|---|---|---|---|
+| A1 | CNAB 400 de cobrança (remessa e retorno), Bradesco e Itaú — Fase 2 | Arquivos reais de remessa/retorno e manuais dos bancos | Boleto registrado, leitura de retorno (reativa o `baixar-por-arquivo`), baixa automática no portal (Fase 3), 2ª via com boleto/Pix registrado |
+| A2 | Remessa de pagamentos CNAB 240 e retorno — Fase 7 | Layouts de pagamento do banco | Pagamento das contas aprovadas pela fila de remessa, guias como conta a pagar na remessa |
+| A3 | Homologação da NFS-e — Fase 9 | Certificado A1 (e-CNPJ) da administradora | Emissão real; confirmar se o município aceita `pAliq`/`IM` e o grupo IBS/CBS |
+| A4 | Chave do cofre em produção — Fase 9 | Criar a variável `Nfse__ChaveCofre` (32 bytes em base64) no servidor | Envio do certificado em produção |
+| A5 | Contratos de administração e CNPJ dos condomínios — Fase 9 | Cadastro (taxa, tipo, dia de vencimento) | Faturamento da taxa de administração |
+| A6 | Caixa de e-mail do Paybox — Fase 5 | Credenciais IMAP em `PayboxEmail:Caixas` (user-secrets/variáveis) | Recebimento de contas por e-mail |
+| A7 | Extrato OFX real — Fase 7 | Um arquivo de conta de condomínio, de qualquer banco | Confirmar a leitura com variações do banco |
+| A8 | Layout da gráfica/bureau — Fase 2 | Especificação do arquivo da gráfica parceira | Exportação para impressão e entrega |
+
+### B. Desenvolvimento sem dependência externa
+
+| # | Item | Origem |
+|---|---|---|
+| B1 | NFS-e: cancelamento e substituição (evento `e101101`), DANFSe em PDF (download do ADN), consulta por chave para recuperar envio interrompido | Fase 9 |
+| B2 | Quebra automática de acordo por inadimplência; abater parcelas pagas ao cancelar acordo (hoje bloqueia) | Fase 3 |
+| B3 | Notificar o aprovador (e-mail/WhatsApp) quando entra lançamento na fila de aprovação | Fase 4 |
+| B4 | Paybox: PDF escaneado sem texto convertido em imagem para leitura | Fase 5 |
+| B5 | DARF/DAM com código de barras; EFD-Reinf (R-2010/R-4020) | Fase 6 |
+| B6 | Balancete em PDF por seção do plano de contas; rateio do orçamento para calcular a taxa condominial | Fase 8 |
+| B7 | PDF do boleto e envio em lote por e-mail respeitando a preferência da unidade (o cálculo do boleto já existe; registro depende de A1) | Fase 2 |
+| B8 | SignalR no portal do condômino (hoje polling de 30 s) — faz sentido depois da baixa automática (A1) | Fase 3 |
+| B9 | Extrato por Open Finance/API bancária | Fase 7 |
+
+### C. Verificação
+
+| # | Item |
+|---|---|
+| C1 | Testar no navegador as telas novas das Fases 3 a 9 (portal do morador, acordos, análise tributária, Paybox, conciliação, previsão orçamentária, painel, NFS-e) |
+| C2 | As 3 falhas antigas dos testes do front em `PermissoesUsuarioComponent` (anteriores a este plano) |
