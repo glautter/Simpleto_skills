@@ -191,7 +191,16 @@ Cada fase segue o padrão do repo: entidade em `Simpleto.Domain/Entities`, handl
 |---|---|---|
 | 0 — Correções | ✅ Concluída em 2026-11-22 | BackApi `1790efa`, front `cebe0dd` |
 | 1 — Fundações | ✅ Concluída em 2026-11-22 (V123/V124 aplicadas no Supabase) | BackApi `b472822`, front `dbf6624` |
-| 2 — Recebíveis bancários | ⏳ Próxima — decisão: **só CNAB** (sem API/PSP por ora) | — |
+| 2 — Recebíveis bancários | 🟡 Parcial — cálculo de boleto Bradesco/Itaú pronto; CNAB 400 remessa/retorno aguarda arquivos reais (decisão: **só CNAB**) | BackApi `cc6544f` |
+| 4 — CP com workflow | ✅ Concluída em 2026-11-22 (V125/V126 aplicadas) | BackApi `fd6f6d7`, `ee80214`; front `9a52182`, `05c88a3` |
+
+Notas da Fase 4 (decisões do usuário: unificar Despesa em Contas a Pagar; aprovador por **permissão**; 1 aprovador com alçada configurável):
+- Lançamento sem `conta_pagar:lancar_sem_aprovacao` → `aguardando_aprovacao`; com a permissão → `programacao` (fila de pagamento). `conta_pagar:aprovar` concedida a AdministradoraAdmin e TenantMasterAdmin; `lancar_sem_aprovacao` a ninguém (conceder por usuário/perfil na tela de permissões).
+- Alçada: reaproveita `AlcadaAprovacaoConfig` do condomínio (cada papel da faixa = 1 aprovação; sem faixa = 1). Quem lança não aprova; histórico em `aprovacoes_conta_pagar`.
+- Telas: Contas a Pagar › aba **Em Aprovação** e **Recorrentes**; menu **Aprovação de Pagamentos** (`/layout/pagar/aprovacoes`).
+- Despesa: criação bloqueada (aviso na tela); antigas seguem aprováveis. Balancete passa a incluir contas a pagar **pagas** no mês (valor bruto, regime de caixa).
+- Recorrentes geram lançamentos `projetado` para 3 meses (worker diário); projetado só paga depois de confirmado (editado).
+- Pendente para fases seguintes: notificar o aprovador (e-mail/WhatsApp) quando há lançamento novo na fila; status `rascunho` (Paybox, Fase 5) e `aguardando_analise_tributaria` (Fase 6).
 
 Notas da Fase 1:
 - Plano de contas: `api/v1/plano-contas` (GET/POST/PATCH/DELETE + `inicializar`), tela em Cadastros/Financeiro › Plano de Contas, plano padrão condominial em `Simpleto.Domain/Services/PlanoContasPadrao.cs`. Permissão `plano_contas:*` espelha `conta_pagar`.
