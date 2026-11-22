@@ -220,6 +220,18 @@ Notas da Fase 5:
   ```
   Variáveis de ambiente equivalentes: `PayboxEmail__Caixas__0__Senha`, etc.
 
+| 6 — Análise tributária | ✅ Concluída em 2026-11-22 (V128 aplicada) | BackApi `1f0bd6e`; front `bb301b5` |
+
+Notas da Fase 6:
+- **Cadastro tributário do fornecedor** (aba Fornecedores): regime (Simples, MEI, Presumido, Real, imune/isento), natureza do serviço, alíquota de ISS, reter ISS (automático/sempre/nunca) e CPRB.
+- **Motor de sugestão** (`Simpleto.Domain/Services/Tributos/MotorRetencao.cs`): PIS/COFINS/CSLL 4,65%, IRRF 1% (mão de obra) ou 1,5% (profissional), INSS 11% (3,5% CPRB; Simples só no Anexo IV; base reduzida por materiais), ISS automático só nos serviços devidos no local da prestação. Dispensa federal até R$ 10,00. Pessoa física: INSS 11% sugerido; IRRF pela tabela progressiva fica manual (aviso). É **sugestão** — o analista confirma.
+- **Etapa no fluxo**: o lançamento grava `analise_tributaria` = `pendente` / `conferida` / `nao_aplicavel`. Pendente **bloqueia aprovação e pagamento**. Quem tem `conta_pagar:analise_tributaria` (AdministradoraAdmin e TenantMasterAdmin) confere no próprio lançamento; os demais caem na fila **Contas a Pagar › Análise Tributária** (`/layout/pagar/analise-tributaria`). Fornecedor sem cadastro tributário → pendente. Lançamentos antigos ficaram `nao_aplicavel`.
+- No formulário de lançamento: painel de sugestão ("Aplicar sugestão"), data de emissão da nota e materiais/equipamentos (dedução do INSS).
+- **Guias** agora são **por condomínio** e ficam vinculadas às retenções que recolhem (a mesma retenção não entra em duas guias; cancelar a guia libera as retenções). Competência: IRRF/CSRF pela data de pagamento; INSS/ISS pela emissão da nota (sem a data, o vencimento). Só entram retenções já conferidas.
+- **Calendário tributário** (aba Guias): por condomínio e competência mostra vencimento, valor a recolher, valor ainda em análise e guias emitidas; botão Gerar guia. Vencimento padrão: federais dia 20, ISS dia 10, ajustados por dias úteis/feriados nacionais (Carnaval, Sexta-feira Santa e Corpus Christi incluídos). Dia e regra (antecipar/postergar) configuráveis nos Parâmetros de Recolhimento; feriados municipais não são considerados.
+- Guias antigas (anteriores à Fase 6) ficam sem condomínio e não têm retenções vinculadas.
+- Fica para depois: DARF/DAM com código de barras; guia virar conta a pagar na fila de remessa (Fase 7); EFD-Reinf (a base de cálculo por retenção já é gravada e a guia lista os lançamentos).
+
 Notas da Fase 1:
 - Plano de contas: `api/v1/plano-contas` (GET/POST/PATCH/DELETE + `inicializar`), tela em Cadastros/Financeiro › Plano de Contas, plano padrão condominial em `Simpleto.Domain/Services/PlanoContasPadrao.cs`. Permissão `plano_contas:*` espelha `conta_pagar`.
 - Contas a pagar ganham `plano_conta_id` (opcional), com seletor no lançamento.
