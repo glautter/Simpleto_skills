@@ -4,42 +4,48 @@
 Foi pedida uma análise de 9 pontos do fluxo financeiro de uma administradora de condomínios (Contas a Receber, Contas a Pagar/Paybox, Análise Tributária, Portais, Conciliação, Lançamento Projetado, Previsão Orçamentária, Reforma Tributária e NFS-e Nacional), indicando o que o Simpleto já faz e o que não faz, com detalhamento e plano para o que falta.
 O código do back-end (`Simpleto.BackApi`) e do front-end (`Simpleto_front_adm`) foi lido para isso, sem nenhuma alteração.
 
+> **Atualização 2026-11-22:** as Fases 0–9 do plano foram implementadas (migrations V123–V132 aplicadas). O que não pôde ser concluído — por depender de insumo externo (arquivos CNAB, certificado A1, credenciais) ou por ter ficado para depois — está consolidado na **seção 6 — Backlog**. O status atual de cada fase está na **seção 5 — Andamento**.
+
 
 ---
 
 ## 1. Resumo executivo
 
+Status **após a implementação das Fases 0–9** (2026-11-22). Referências "A*/B*" apontam para a seção 6 — Backlog.
+
 | # | Ponto | Status |
 |---|---|---|
-| 1 | Contas a Receber — acordo | 🟡 Parcial |
-| 1 | Contas a Receber — boleto registrado | 🔴 Não feito (gateway falso) |
-| 1 | Contas a Receber — envio por e-mail (PDF) / bureau | 🔴 Não feito |
+| 1 | Contas a Receber — acordo | 🟢 Feito (Fase 3 — acordo com vários débitos, encargos e parcelas geradas) |
+| 1 | Contas a Receber — boleto registrado | 🟡 Parcial (cálculo FEBRABAN Bradesco/Itaú pronto; remessa/retorno CNAB 400 aguarda arquivos reais — A1) |
+| 1 | Contas a Receber — envio por e-mail (PDF) / bureau | 🔴 Backlog (B7 / A8) |
 | 2 | Contas a Pagar — núcleo (lançamento, baixa, cancelamento) | 🟢 Feito |
-| 2 | Paybox (e-mail/upload + IA/OCR preenche a tela) | 🔴 Não feito |
-| 2 | Fluxo operador → acessor/gerente → remessa (com privilégio de pular) | 🟡 Parcial (existe em `Despesa`, desligado de ContaPagar) |
-| 2 | Remessa de pagamento ao banco | 🔴 Não feito |
-| 3 | Análise tributária antes do CP | 🟡 Parcial (retenção manual, sem motor de regra/calendário) |
-| 4 | Portal do Condômino em (quase) tempo real | 🟡 Parcial (lista parcelas; sem sincronização) |
-| 4 | Portal do Síndico (CP, CR, balancetes, pastas digitais) | 🟡 Parcial (via portal condomínio; sem pasta digital) |
-| 5 | Conciliação bancária (retorno, débito automático) | 🔴 Simulada (tela existe, não lê arquivo) |
-| 6 | Lançamento projetado em CP | 🔴 Não feito |
-| 7 | Previsão orçamentária por seção do balancete | 🔴 Não feito (falta plano de contas) |
-| 8 | Reforma tributária (IBS/CBS) | 🔴 Não feito |
-| 9 | Emissão de NFS-e (Padrão Nacional) | 🔴 Não feito |
+| 2 | Paybox (e-mail/upload + IA/OCR preenche a tela) | 🟢 Feito (Fase 5 — caixa de e-mail aguarda credenciais IMAP — A6) |
+| 2 | Fluxo operador → aprovador → remessa (com privilégio de pular) | 🟢 Feito (Fase 4 — alçada configurável, `lancar_sem_aprovacao`) |
+| 2 | Remessa de pagamento ao banco | 🔴 Backlog (A2 — aguarda layouts CNAB 240 do banco) |
+| 3 | Análise tributária antes do CP | 🟢 Feito (Fase 6 — motor de retenção, etapa no fluxo, guias e calendário; DARF/EFD-Reinf em B5) |
+| 4 | Portal do Condômino em (quase) tempo real | 🟡 Parcial (Fase 3 — taxa condominial unificada e polling de 30 s; baixa automática depende de A1; SignalR em B8) |
+| 4 | Portal do Síndico (CP, CR, balancetes, pastas digitais) | 🟢 Feito (Fase 8 — painel read-only e pasta digital mensal) |
+| 5 | Conciliação bancária (retorno, débito automático) | 🟡 Parcial (Fase 7 — extrato OFX, matching e débito automático prontos; retornos CNAB em A1/A2; Open Finance em B9) |
+| 6 | Lançamento projetado em CP | 🟢 Feito (Fase 4 — recorrentes + lançamentos projetados) |
+| 7 | Previsão orçamentária por seção do balancete | 🟢 Feito (Fase 8 — previsão, orçado × realizado; balancete PDF por seção em B6) |
+| 8 | Reforma tributária (IBS/CBS) | 🟡 Parcial (Fase 9 — campos em entrada/saída e estimativa 2026; split payment e alíquotas 2027+ dependem de regulamentação) |
+| 9 | Emissão de NFS-e (Padrão Nacional) | 🟡 Pronta até o envio (Fase 9 — homologação aguarda certificado A1 e chave do cofre — A3/A4; cancelamento/DANFSe em B1) |
 
-### ⚠️ Bug crítico encontrado (corrigir antes de tudo)
-`Simpleto.Infrastructure/Repositories/ReciboRateioRepository.cs:163` — `BaixarPendentesPorArquivoAsync` (endpoint `POST rateio/recibos/baixar-por-arquivo`) **não lê arquivo nenhum**: executa `UPDATE ... SET status='baixado_arquivo' WHERE tenant_id=@TenantId AND status IN ('gerado','enviado')`. Qualquer clique em "baixar por arquivo de retorno" marca **todas as taxas pendentes da administradora como pagas**. Ação imediata: desabilitar o endpoint/botão (retornar 501) até existir leitura real de retorno CNAB (Fase 2).
+### ✅ Bug crítico encontrado (corrigido na Fase 0)
+`Simpleto.Infrastructure/Repositories/ReciboRateioRepository.cs:163` — `BaixarPendentesPorArquivoAsync` (endpoint `POST rateio/recibos/baixar-por-arquivo`) **não lia arquivo nenhum**: executava `UPDATE ... SET status='baixado_arquivo'` em **todas as taxas pendentes da administradora**. **Corrigido:** endpoint recusado e botão desabilitado no front (BackApi `1790efa`, front `cebe0dd`); volta quando existir leitura real de retorno CNAB (backlog A1).
 
-### Achados estruturais que afetam vários pontos
-- **Dois modelos de recebível que não conversam:** (A) `Cobranca → Parcela` (usado por acordos e portal do condômino) e (B) `RateioMensal → ReciboRateio` (onde vive a taxa condominial). O condômino não vê a taxa condominial.
-- **Sem plano de contas:** balancete é lista plana de receitas (`Cobranca`) e despesas (`Despesa` aprovada) — `BalanceteDadosHelper.cs`. Rotas `plano-contas`, `parametros-plano-contas`, `contas-bancarias` no front são `stub`. Bloqueia orçamento, seções do balancete e análise tributária por tipo de serviço.
-- **Event bus só em memória** (`ChannelEventBus` + `EventBusProcessor`): eventos se perdem num restart. Remessa, retorno, NFS-e e OCR precisam de fila durável.
-- **Storage público** (Supabase): não serve para certificado A1 (.pfx) nem para documentos fiscais sensíveis.
-- **E-mail sem anexo:** `IEmailSenderService.EnviarAsync(dest, assunto, html)`.
+### Achados estruturais que afetavam vários pontos (todos tratados)
+- **Dois modelos de recebível que não conversavam** (`Cobranca → Parcela` × `RateioMensal → ReciboRateio`): ✅ unificados na visão do condômino e nos acordos (Fase 3).
+- **Sem plano de contas:** ✅ Fase 1 — plano de contas hierárquico com modelo padrão, classificação de lançamentos; realizado por conta na Fase 8.
+- **Event bus só em memória:** ✅ Fase 1 — fila durável (`tarefas_fila` + `FilaTarefasWorker`).
+- **Storage público:** ✅ Fase 1 — `IArquivoPrivadoStorage` (bucket privado + link assinado); certificado A1 com senha cifrada (Fase 9).
+- **E-mail sem anexo:** ✅ Fase 1 — `EnviarAsync(..., anexos)`.
 
 ---
 
 ## 2. Análise por ponto
+
+> **Nota:** esta seção registra a análise feita **antes** da implementação e foi mantida como histórico/justificativa do plano. O estado atual está nas seções **5 — Andamento** e **6 — Backlog**.
 
 ### 2.1 Contas a Receber
 **Já existe**
@@ -153,6 +159,8 @@ O código do back-end (`Simpleto.BackApi`) e do front-end (`Simpleto_front_adm`)
 
 ## 3. Plano de implementação (fases)
 
+> ✅ Plano executado — resultado na seção 5. Mantido abaixo como referência do escopo de cada fase.
+
 Ordem guiada por dependência: plano de contas e fila durável destravam quase tudo; integração bancária destrava portal, conciliação e remessa.
 
 | Fase | Entrega | Depende de | Tamanho |
@@ -168,14 +176,14 @@ Ordem guiada por dependência: plano de contas e fila durável destravam quase t
 | **8 — Síndico e orçamento** | Dashboard read-only do síndico; pasta digital mensal no fechamento; previsão orçamentária com sugestão por histórico; orçado × realizado | 1, 7 | M |
 | **9 — NFS-e Nacional + Reforma** | Cadastro fiscal, A1, DPS + assinatura + API Sefin/ADN, DANFSe, faturamento em lote da taxa de administração; campos IBS/CBS em entrada e saída | 1 | G |
 
-Cada fase segue o padrão do repo: entidade em `Simpleto.Domain/Entities`, handler em `Simpleto.Application/Handlers/<Modulo>`, repositório Dapper em `Simpleto.Infrastructure/Repositories`, controller em `Simpleto.Api/Controllers/v1`, migration `Vnnn__*.sql` em `Simpleto.Infrastructure/Migrations` (próxima: V123), permissões em `PermissionPoliciesConfiguration.cs` + seed, telas em `Simpleto_front_adm/src/app/pages/condominio/financeiro/*`. Migrations aplicadas só com autorização explícita.
+Cada fase segue o padrão do repo: entidade em `Simpleto.Domain/Entities`, handler em `Simpleto.Application/Handlers/<Modulo>`, repositório Dapper em `Simpleto.Infrastructure/Repositories`, controller em `Simpleto.Api/Controllers/v1`, migration `Vnnn__*.sql` em `Simpleto.Infrastructure/Migrations` (usadas: V123–V132), permissões em `PermissionPoliciesConfiguration.cs` + seed, telas em `Simpleto_front_adm/src/app/pages/condominio/financeiro/*`. Migrations aplicadas só com autorização explícita.
 
-### Decisões que dependem do negócio (levantar antes da fase correspondente)
-- Banco/PSP inicial para boleto e pagamentos (fase 2/7).
-- `Despesa` some (vira ContaPagar) ou continua como pedido de compra (fase 4).
-- Papéis exatos (acessor, gerente) e alçadas padrão por valor (fase 4).
-- Layout exigido pela gráfica/bureau parceira (fase 2).
-- Municípios dos clientes já no emissor nacional de NFS-e (fase 9).
+### Decisões que dependiam do negócio (status após a execução)
+- Banco/PSP inicial para boleto e pagamentos (fase 2/7): **decidido — só CNAB** (Bradesco/Itaú); aguarda arquivos/layouts reais (backlog A1/A2).
+- `Despesa` some (vira ContaPagar) ou continua como pedido de compra (fase 4): **decidido — unificada em Contas a Pagar** (criação de Despesa bloqueada).
+- Papéis exatos e alçadas padrão por valor (fase 4): **decidido — aprovador por permissão** (`conta_pagar:aprovar`), 1 aprovador com alçada configurável.
+- Layout exigido pela gráfica/bureau parceira (fase 2): **pendente** (backlog A8).
+- Municípios dos clientes no emissor nacional de NFS-e (fase 9): **resolvido** — para o item 17.12 o que importa é o município da administradora; confirmar na homologação (backlog A3).
 
 ---
 
@@ -187,12 +195,20 @@ Cada fase segue o padrão do repo: entidade em `Simpleto.Domain/Entities`, handl
 
 ## 5. Andamento
 
+Plano executado em 2026-11-22. Tabela consolidada (notas detalhadas abaixo, na ordem em que as fases foram concluídas); pendências na seção 6.
+
 | Fase | Status | Commits |
 |---|---|---|
 | 0 — Correções | ✅ Concluída em 2026-11-22 | BackApi `1790efa`, front `cebe0dd` |
 | 1 — Fundações | ✅ Concluída em 2026-11-22 (V123/V124 aplicadas no Supabase) | BackApi `b472822`, front `dbf6624` |
-| 2 — Recebíveis bancários | 🟡 Parcial — cálculo de boleto Bradesco/Itaú pronto; CNAB 400 remessa/retorno aguarda arquivos reais (decisão: **só CNAB**) | BackApi `cc6544f` |
+| 2 — Recebíveis bancários | 🟡 Parcial — cálculo de boleto Bradesco/Itaú pronto; CNAB 400 remessa/retorno aguarda arquivos reais (decisão: **só CNAB**) — backlog A1/A8/B7 | BackApi `cc6544f` |
+| 3 — Portal e acordos | 🟡 Parcial (V129 aplicada) — falta baixa automática (depende do retorno CNAB — A1), 2ª via com boleto/Pix registrado e SignalR (B8) | BackApi `caf61e2`; front `34989bc` |
 | 4 — CP com workflow | ✅ Concluída em 2026-11-22 (V125/V126 aplicadas) | BackApi `fd6f6d7`, `ee80214`; front `9a52182`, `05c88a3` |
+| 5 — Paybox | ✅ Concluída em 2026-11-22 (V127 aplicada) — e-mail aguarda credenciais da caixa (A6) | BackApi `1cdf6e6`, `aea2535`; front `e4d5a6b`, `ebe2125` |
+| 6 — Análise tributária | ✅ Concluída em 2026-11-22 (V128 aplicada) | BackApi `1f0bd6e`; front `bb301b5` |
+| 7 — Remessa e conciliação | 🟡 Parcial (V131 aplicada) — conciliação por OFX pronta; remessa de pagamentos (CNAB 240) e retorno de cobrança aguardam os layouts do banco (A2) | BackApi `c47848d`; front `7a63843` |
+| 8 — Síndico e orçamento | ✅ Concluída em 2026-11-22 (V130 aplicada) | BackApi `995c133`; front `d2df659` |
+| 9 — NFS-e Nacional + Reforma | 🟡 Pronta até o envio (V132 aplicada) — falta homologar na produção restrita com o certificado A1 real (A3/A4) | BackApi `5c82209`; front `63cd5c2` |
 
 Notas da Fase 4 (decisões do usuário: unificar Despesa em Contas a Pagar; aprovador por **permissão**; 1 aprovador com alçada configurável):
 - Lançamento sem `conta_pagar:lancar_sem_aprovacao` → `aguardando_aprovacao`; com a permissão → `programacao` (fila de pagamento). `conta_pagar:aprovar` concedida a AdministradoraAdmin e TenantMasterAdmin; `lancar_sem_aprovacao` a ninguém (conceder por usuário/perfil na tela de permissões).
@@ -201,8 +217,6 @@ Notas da Fase 4 (decisões do usuário: unificar Despesa em Contas a Pagar; apro
 - Despesa: criação bloqueada (aviso na tela); antigas seguem aprováveis. Balancete passa a incluir contas a pagar **pagas** no mês (valor bruto, regime de caixa).
 - Recorrentes geram lançamentos `projetado` para 3 meses (worker diário); projetado só paga depois de confirmado (editado).
 - Pendente para fases seguintes: notificar o aprovador (e-mail/WhatsApp) quando há lançamento novo na fila; status `aguardando_analise_tributaria` (Fase 6).
-
-| 5 — Paybox | ✅ Concluída em 2026-11-22 (V127 aplicada) — e-mail aguarda credenciais da caixa | BackApi `1cdf6e6`, `aea2535`; front `e4d5a6b`, `ebe2125` |
 
 Notas da Fase 5:
 - Tela **Financeiro › Paybox (enviar contas)** (`/layout/pagar/paybox`): arrastar PDF/foto/XML → leitura automática → "Revisar e lançar" abre o formulário já preenchido → lançamento segue o fluxo de aprovação. Aprovador vê **Ver fatura** na fila.
@@ -220,16 +234,12 @@ Notas da Fase 5:
   ```
   Variáveis de ambiente equivalentes: `PayboxEmail__Caixas__0__Senha`, etc.
 
-| 3 — Portal e acordos | 🟡 Parcial em 2026-11-22 (V129 aplicada) — falta baixa automática (depende do retorno CNAB da Fase 2), 2ª via com boleto/Pix registrado e SignalR | BackApi `caf61e2`; front `34989bc` |
-
 Notas da Fase 3 (parte que não depende do banco):
 - **Portal do condômino** (Boletos e PIX, Extrato, Histórico): a **taxa condominial** (recibos do rateio) aparece junto com as parcelas, com status unificado (PENDENTE / PAGO / NEGOCIADA / CANCELADA) e **valor atualizado** (multa 2% + juros 1% a.m. pro rata, `CalculadoraEncargosService`). Seção **Meus acordos** com débitos incluídos e parcelas (pagas/em aberto).
 - **Sincronização**: `GET meu-financeiro/versao` devolve uma assinatura do estado financeiro das unidades; as telas consultam a cada 30 s (só com a aba visível) e recarregam quando muda. Quando a baixa automática (retorno CNAB/webhook) existir, o morador vê o "pago" em até 30 s sem recarregar. SignalR fica para quando houver webhook.
 - **Acordo com vários débitos**: diálogo em Cobrança › Geral › Acordo lista os débitos em aberto da unidade (parcelas + taxa condominial) atualizados; desconto sobre os encargos, nº de parcelas (1–60) e 1º vencimento, com simulação no servidor. Ao registrar, numa transação: cria a cobrança `ACORDO` com as parcelas (centavos na 1ª), o acordo e `acordo_itens`, e marca os débitos como negociados (só se ainda estiverem no mesmo status — se algum foi pago no meio tempo, nada é gravado). Cancelar devolve os débitos ao status anterior e cancela as parcelas não pagas; acordo com parcela paga não pode ser cancelado.
 - Termo de Acordo e Confissão de Dívida (PDF) listam os débitos, a composição do valor e o cronograma. Acordos antigos (1 parcela) continuam com o texto anterior.
 - Fica para depois: quebra automática de acordo por inadimplência; abater parcelas pagas ao cancelar (hoje bloqueia).
-
-| 7 — Remessa e conciliação | 🟡 Parcial em 2026-11-22 (V131 aplicada) — conciliação por OFX pronta; remessa de pagamentos (CNAB 240) e retorno de cobrança aguardam os layouts do banco | BackApi `c47848d`; front `7a63843` |
 
 Notas da Fase 7 (parte OFX):
 - Tela **Conciliação Bancária** (`/layout/conciliacao`) substitui a versão simulada (o "processar arquivo" antigo não lia arquivo nenhum; o módulo foi removido).
@@ -240,8 +250,6 @@ Notas da Fase 7 (parte OFX):
 - Um título só pode estar conciliado com um movimento (índice único); tudo em transação.
 - Fica para depois: remessa de pagamentos (CNAB 240) e retorno — dependem dos layouts do banco; leitura de extrato por Open Finance/API.
 
-| 8 — Síndico e orçamento | ✅ Concluída em 2026-11-22 (V130 aplicada) | BackApi `995c133`; front `d2df659` |
-
 Notas da Fase 8:
 - **Realizado por conta do plano** (regime de caixa), base de tudo: receitas = taxa condominial baixada (1.01.001), parcelas pagas pelo tipo da cobrança (`ClassificacaoReceita`: CONDOMINIO/ACORDO→taxa, FUNDO→fundo de reserva, EXTRA→taxa extra, OBRA→rateio de obras, NOTA_DEBITO/MULTA→multas regimentais, RESERVA/LOCACAO→locação de áreas, demais→outras) e multa/juros recebidos (1.03.001); despesas = contas a pagar pagas na conta classificada. Sem classificação (ou despesa legada) → "não classificadas". Só funciona com o plano de contas do condomínio inicializado (códigos do modelo padrão).
 - **Previsão Orçamentária** (`/layout/previsao-orcamentaria`; no portal do condomínio, `Financeiro › Previsão Orçamentária`): uma por condomínio/exercício; criação em branco ou pelo realizado do ano anterior + reajuste (mês sem histórico recebe a média); grade de 12 meses por conta analítica com o realizado anterior de referência; aprovar (com referência da assembleia), reabrir e excluir rascunho. Permissão `previsao_orcamentaria:*` (manage = aprovar/reabrir), espelhando `plano_contas`; leitura também para quem tem `financeiro:read`.
@@ -249,8 +257,6 @@ Notas da Fase 8:
 - **Painel Financeiro** (síndico/conselho, somente leitura; `financeiro:read`): resultado do mês e do ano, % do orçamento executado, inadimplência (parcelas + taxa condominial vencidas), contas a pagar dos próximos 30 dias e em aprovação, despesas por seção e últimos pagamentos.
 - **Pasta digital mensal**: gerada pela fila (`pasta_digital.gerar`) ao **fechar o período** ou pelo botão no painel (`financeiro:manage`). ZIP em bucket privado `pastas-digitais`: balancete (o emitido, ou um demonstrativo), orçado × realizado por seção (CSV), relação de pagamentos (CSV) e as notas/faturas do Paybox. Download por link temporário (10 min) e **visto** do síndico/conselho com observação.
 - Fica para depois: balancete em PDF por seção (hoje o PDF do balancete segue com a lista de lançamentos; a visão por seção está no orçado × realizado e na pasta digital); rateio do orçamento para calcular a taxa condominial.
-
-| 6 — Análise tributária | ✅ Concluída em 2026-11-22 (V128 aplicada) | BackApi `1f0bd6e`; front `bb301b5` |
 
 Notas da Fase 6:
 - **Cadastro tributário do fornecedor** (aba Fornecedores): regime (Simples, MEI, Presumido, Real, imune/isento), natureza do serviço, alíquota de ISS, reter ISS (automático/sempre/nunca) e CPRB.
@@ -261,8 +267,6 @@ Notas da Fase 6:
 - **Calendário tributário** (aba Guias): por condomínio e competência mostra vencimento, valor a recolher, valor ainda em análise e guias emitidas; botão Gerar guia. Vencimento padrão: federais dia 20, ISS dia 10, ajustados por dias úteis/feriados nacionais (Carnaval, Sexta-feira Santa e Corpus Christi incluídos). Dia e regra (antecipar/postergar) configuráveis nos Parâmetros de Recolhimento; feriados municipais não são considerados.
 - Guias antigas (anteriores à Fase 6) ficam sem condomínio e não têm retenções vinculadas.
 - Fica para depois: DARF/DAM com código de barras; guia virar conta a pagar na fila de remessa (Fase 7); EFD-Reinf (a base de cálculo por retenção já é gravada e a guia lista os lançamentos).
-
-| 9 — NFS-e Nacional + Reforma | 🟡 Pronta até o envio em 2026-11-22 (V132 aplicada) — falta homologar na produção restrita com o certificado A1 real | BackApi `5c82209`; front `63cd5c2` |
 
 Notas da Fase 9:
 - Tela **Financeiro › NFS-e (taxa de administração)** (`/layout/nfse`), permissão `nfse:*` espelhando `contrato` (manage = configuração e certificado; create = gerar/emitir; delete = excluir DPS não enviada).
