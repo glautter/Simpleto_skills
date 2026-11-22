@@ -220,6 +220,15 @@ Notas da Fase 5:
   ```
   Variáveis de ambiente equivalentes: `PayboxEmail__Caixas__0__Senha`, etc.
 
+| 3 — Portal e acordos | 🟡 Parcial em 2026-11-22 (V129 aplicada) — falta baixa automática (depende do retorno CNAB da Fase 2), 2ª via com boleto/Pix registrado e SignalR | BackApi `caf61e2`; front `34989bc` |
+
+Notas da Fase 3 (parte que não depende do banco):
+- **Portal do condômino** (Boletos e PIX, Extrato, Histórico): a **taxa condominial** (recibos do rateio) aparece junto com as parcelas, com status unificado (PENDENTE / PAGO / NEGOCIADA / CANCELADA) e **valor atualizado** (multa 2% + juros 1% a.m. pro rata, `CalculadoraEncargosService`). Seção **Meus acordos** com débitos incluídos e parcelas (pagas/em aberto).
+- **Sincronização**: `GET meu-financeiro/versao` devolve uma assinatura do estado financeiro das unidades; as telas consultam a cada 30 s (só com a aba visível) e recarregam quando muda. Quando a baixa automática (retorno CNAB/webhook) existir, o morador vê o "pago" em até 30 s sem recarregar. SignalR fica para quando houver webhook.
+- **Acordo com vários débitos**: diálogo em Cobrança › Geral › Acordo lista os débitos em aberto da unidade (parcelas + taxa condominial) atualizados; desconto sobre os encargos, nº de parcelas (1–60) e 1º vencimento, com simulação no servidor. Ao registrar, numa transação: cria a cobrança `ACORDO` com as parcelas (centavos na 1ª), o acordo e `acordo_itens`, e marca os débitos como negociados (só se ainda estiverem no mesmo status — se algum foi pago no meio tempo, nada é gravado). Cancelar devolve os débitos ao status anterior e cancela as parcelas não pagas; acordo com parcela paga não pode ser cancelado.
+- Termo de Acordo e Confissão de Dívida (PDF) listam os débitos, a composição do valor e o cronograma. Acordos antigos (1 parcela) continuam com o texto anterior.
+- Fica para depois: quebra automática de acordo por inadimplência; abater parcelas pagas ao cancelar (hoje bloqueia).
+
 | 6 — Análise tributária | ✅ Concluída em 2026-11-22 (V128 aplicada) | BackApi `1f0bd6e`; front `bb301b5` |
 
 Notas da Fase 6:
