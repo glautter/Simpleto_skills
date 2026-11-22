@@ -262,6 +262,20 @@ Notas da Fase 6:
 - Guias antigas (anteriores à Fase 6) ficam sem condomínio e não têm retenções vinculadas.
 - Fica para depois: DARF/DAM com código de barras; guia virar conta a pagar na fila de remessa (Fase 7); EFD-Reinf (a base de cálculo por retenção já é gravada e a guia lista os lançamentos).
 
+| 9 — NFS-e Nacional + Reforma | 🟡 Pronta até o envio em 2026-11-22 (V132 aplicada) — falta homologar na produção restrita com o certificado A1 real | BackApi `5c82209`; front `63cd5c2` |
+
+Notas da Fase 9:
+- Tela **Financeiro › NFS-e (taxa de administração)** (`/layout/nfse`), permissão `nfse:*` espelhando `contrato` (manage = configuração e certificado; create = gerar/emitir; delete = excluir DPS não enviada).
+- **Configuração**: dados fiscais da administradora (CNPJ, IM, município IBGE, Simples/regime, código de tributação nacional — padrão 171201, item 17.12 —, ISS, série e próximo número da DPS, ambiente). Nome e endereço do prestador **não** vão na DPS (a Sefin lê do cadastro nacional).
+- **Certificado A1**: upload do .pfx + senha; confere senha, chave privada, validade e o CNPJ do e-CNPJ (CN "RAZÃO:CNPJ") contra o cadastro. Arquivo no bucket privado `certificados-nfse`; senha cifrada com AES-256-GCM e chave **`Nfse:ChaveCofre`** (base64 de 32 bytes) fora do banco e do repositório. Gerada nos user-secrets da máquina de desenvolvimento; **em produção criar a variável `Nfse__ChaveCofre`** (outra chave). Aviso de vencimento com 30 dias.
+- **Faturamento**: por competência lista os contratos de administração vigentes; valor = taxa fixa ou % sobre os recibos da taxa condominial do mês (editável); estimativa de ISS e de IBS/CBS. **Gerar e validar DPS** monta o XML no leiaute nacional 1.01 e valida contra os XSD da NT SE/CGNFS-e 009 (embutidos em `Simpleto.Infrastructure/Nfse/Schemas`; trocar os arquivos quando sair leiaute novo). O número da série só é consumido se o XML estiver válido; um contrato não é faturado duas vezes na mesma competência e ambiente.
+- **Emissão**: remonta a DPS com a hora atual, assina (XMLDSig enveloped, RSA-SHA1, referência ao `infDPS`, como as bibliotecas que já emitem em produção), revalida e envia com TLS mútuo ao Sefin Nacional (`POST /nfse`, DPS em GZip+Base64). Autorizada: guarda chave, número, XML da NFS-e e ISS/IBS/CBS oficiais. Rejeitada: mostra as mensagens da Sefin e permite reenviar. Falha de rede: fica rejeitada com orientação de conferir no Portal Nacional antes de reenviar.
+- **Nota autorizada em produção** vira conta a pagar no condomínio (fornecedor = administradora, criado se preciso; vencimento pelo dia do contrato; aguardando aprovação e com análise tributária pendente para conferir as retenções). Homologação não lança.
+- **Reforma tributária**: grupo IBSCBS opcional na DPS (CST, cClassTrib, cIndOp configuráveis); estimativa só para 2026 (CBS 0,9% + IBS 0,1%, base sem o ISS) — de 2027 em diante não há alíquota de referência fixada e o sistema não inventa número; o valor oficial vem da nota autorizada. Contas a pagar ganham **IBS** e **CBS** destacados na nota do fornecedor, preenchidos pelo Paybox a partir do XML (NFS-e Nacional e NF-e).
+- **Município**: para o item 17.12 o ISS é devido no estabelecimento do prestador, então o que importa é o **município da administradora** estar no emissor nacional (não os municípios dos condomínios).
+- Ainda não testado contra a Sefin (sem certificado). Para homologar: enviar o A1, manter ambiente Homologação, emitir uma nota e conferir mensagens. Pontos a confirmar na homologação: se o município exige/recusa `pAliq` e `IM`, e se o grupo IBSCBS é aceito no ambiente.
+- Fica para depois: cancelamento e substituição (evento `e101101`), DANFSe em PDF (download do ADN), consulta de nota por chave para recuperar envio interrompido.
+
 Notas da Fase 1:
 - Plano de contas: `api/v1/plano-contas` (GET/POST/PATCH/DELETE + `inicializar`), tela em Cadastros/Financeiro › Plano de Contas, plano padrão condominial em `Simpleto.Domain/Services/PlanoContasPadrao.cs`. Permissão `plano_contas:*` espelha `conta_pagar`.
 - Contas a pagar ganham `plano_conta_id` (opcional), com seletor no lançamento.
