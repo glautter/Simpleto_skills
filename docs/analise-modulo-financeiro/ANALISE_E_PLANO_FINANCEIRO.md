@@ -200,7 +200,25 @@ Notas da Fase 4 (decisões do usuário: unificar Despesa em Contas a Pagar; apro
 - Telas: Contas a Pagar › aba **Em Aprovação** e **Recorrentes**; menu **Aprovação de Pagamentos** (`/layout/pagar/aprovacoes`).
 - Despesa: criação bloqueada (aviso na tela); antigas seguem aprováveis. Balancete passa a incluir contas a pagar **pagas** no mês (valor bruto, regime de caixa).
 - Recorrentes geram lançamentos `projetado` para 3 meses (worker diário); projetado só paga depois de confirmado (editado).
-- Pendente para fases seguintes: notificar o aprovador (e-mail/WhatsApp) quando há lançamento novo na fila; status `rascunho` (Paybox, Fase 5) e `aguardando_analise_tributaria` (Fase 6).
+- Pendente para fases seguintes: notificar o aprovador (e-mail/WhatsApp) quando há lançamento novo na fila; status `aguardando_analise_tributaria` (Fase 6).
+
+| 5 — Paybox | ✅ Concluída em 2026-11-22 (V127 aplicada) — e-mail aguarda credenciais da caixa | BackApi `1cdf6e6`, `aea2535`; front `e4d5a6b`, `ebe2125` |
+
+Notas da Fase 5:
+- Tela **Financeiro › Paybox (enviar contas)** (`/layout/pagar/paybox`): arrastar PDF/foto/XML → leitura automática → "Revisar e lançar" abre o formulário já preenchido → lançamento segue o fluxo de aprovação. Aprovador vê **Ver fatura** na fila.
+- Leitura: XML NF-e/NFS-e direto; PDF com texto → linha digitável (boleto e arrecadação) e CNPJ validados por DV; IA (OpenRouter, `LlmSettings`) só para o que faltar, com validação de faixa; imagem → modelo de visão. PDF escaneado sem texto: pede envio como imagem ou preenchimento manual (não há conversão PDF→imagem).
+- Fornecedor reconhecido pelo CNPJ cadastrado; condomínio pelo CNPJ do pagador (necessário para os documentos vindos por e-mail).
+- **Caixa de e-mail (pendente de configuração pelo usuário)** — sem ela o worker fica parado. Configurar em user-secrets ou variáveis de ambiente (nunca no repositório):
+  ```json
+  "PayboxEmail": { "Caixas": [ {
+      "TenantId": "<id do tenant da administradora>",
+      "Host": "imap.gmail.com", "Porta": 993, "UsarSsl": true,
+      "Usuario": "contas@suaadministradora.com.br", "Senha": "<senha de app>",
+      "PastaEntrada": "INBOX", "PastaProcessados": "Paybox-Processados",
+      "DominiosPermitidos": []
+  } ] }
+  ```
+  Variáveis de ambiente equivalentes: `PayboxEmail__Caixas__0__Senha`, etc.
 
 Notas da Fase 1:
 - Plano de contas: `api/v1/plano-contas` (GET/POST/PATCH/DELETE + `inicializar`), tela em Cadastros/Financeiro › Plano de Contas, plano padrão condominial em `Simpleto.Domain/Services/PlanoContasPadrao.cs`. Permissão `plano_contas:*` espelha `conta_pagar`.
