@@ -229,6 +229,17 @@ Notas da Fase 3 (parte que não depende do banco):
 - Termo de Acordo e Confissão de Dívida (PDF) listam os débitos, a composição do valor e o cronograma. Acordos antigos (1 parcela) continuam com o texto anterior.
 - Fica para depois: quebra automática de acordo por inadimplência; abater parcelas pagas ao cancelar (hoje bloqueia).
 
+| 7 — Remessa e conciliação | 🟡 Parcial em 2026-11-22 (V131 aplicada) — conciliação por OFX pronta; remessa de pagamentos (CNAB 240) e retorno de cobrança aguardam os layouts do banco | BackApi `c47848d`; front `7a63843` |
+
+Notas da Fase 7 (parte OFX):
+- Tela **Conciliação Bancária** (`/layout/conciliacao`) substitui a versão simulada (o "processar arquivo" antigo não lia arquivo nenhum; o módulo foi removido).
+- **Importar extrato OFX** (1.x SGML ou 2.x XML; vírgula decimal, fuso "[-3:BRT]", Latin-1 e FITID ausente tratados). A conta é identificada por banco/agência/conta do arquivo e cadastrada no condomínio escolhido na 1ª importação; conta já vinculada a outro condomínio é recusada. Arquivo repetido (hash) e movimento repetido (FITID por conta) não entram duas vezes. Guarda o saldo do extrato.
+- **Sugestões** (`MotorConciliacao`): débitos × contas a pagar aprovadas (programação/agendado/pago, e projetados de débito automático com até 15% de diferença); créditos × taxa condominial e parcelas (inclusive com multa/juros). Pontos por valor, data (até 10 dias), nome do fornecedor/unidade e documento no histórico. "Alta confiança" = ≥ 85 pontos e 20 acima da 2ª opção → botão **Confirmar N sugestões**.
+- **Conciliar** baixa o que estava em aberto com a data e o valor do extrato (conta a pagar → paga; projetado → paga com o valor real; recibo → `baixado_conciliacao`; parcela → paga). **Desfazer** devolve o título ao status anterior. **Ignorar** (transferências, aplicações) com motivo.
+- **Lançar despesa**: débito sem conta a pagar (tarifa, débito automático) vira conta a pagar já paga, conciliada (exige `conta_pagar:create`). **Regras** "histórico contém X → fornecedor/conta" sugerem esse lançamento.
+- Um título só pode estar conciliado com um movimento (índice único); tudo em transação.
+- Fica para depois: remessa de pagamentos (CNAB 240) e retorno — dependem dos layouts do banco; leitura de extrato por Open Finance/API.
+
 | 8 — Síndico e orçamento | ✅ Concluída em 2026-11-22 (V130 aplicada) | BackApi `995c133`; front `d2df659` |
 
 Notas da Fase 8:
