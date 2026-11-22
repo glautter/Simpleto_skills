@@ -229,6 +229,16 @@ Notas da Fase 3 (parte que não depende do banco):
 - Termo de Acordo e Confissão de Dívida (PDF) listam os débitos, a composição do valor e o cronograma. Acordos antigos (1 parcela) continuam com o texto anterior.
 - Fica para depois: quebra automática de acordo por inadimplência; abater parcelas pagas ao cancelar (hoje bloqueia).
 
+| 8 — Síndico e orçamento | ✅ Concluída em 2026-11-22 (V130 aplicada) | BackApi `995c133`; front `d2df659` |
+
+Notas da Fase 8:
+- **Realizado por conta do plano** (regime de caixa), base de tudo: receitas = taxa condominial baixada (1.01.001), parcelas pagas pelo tipo da cobrança (`ClassificacaoReceita`: CONDOMINIO/ACORDO→taxa, FUNDO→fundo de reserva, EXTRA→taxa extra, OBRA→rateio de obras, NOTA_DEBITO/MULTA→multas regimentais, RESERVA/LOCACAO→locação de áreas, demais→outras) e multa/juros recebidos (1.03.001); despesas = contas a pagar pagas na conta classificada. Sem classificação (ou despesa legada) → "não classificadas". Só funciona com o plano de contas do condomínio inicializado (códigos do modelo padrão).
+- **Previsão Orçamentária** (`/layout/previsao-orcamentaria`; no portal do condomínio, `Financeiro › Previsão Orçamentária`): uma por condomínio/exercício; criação em branco ou pelo realizado do ano anterior + reajuste (mês sem histórico recebe a média); grade de 12 meses por conta analítica com o realizado anterior de referência; aprovar (com referência da assembleia), reabrir e excluir rascunho. Permissão `previsao_orcamentaria:*` (manage = aprovar/reabrir), espelhando `plano_contas`; leitura também para quem tem `financeiro:read`.
+- **Orçado × Realizado** por seção do plano (aba na mesma tela): acumulado até o mês escolhido, diferença e desvio; destaca despesa 10% acima ou receita 10% abaixo do orçado.
+- **Painel Financeiro** (síndico/conselho, somente leitura; `financeiro:read`): resultado do mês e do ano, % do orçamento executado, inadimplência (parcelas + taxa condominial vencidas), contas a pagar dos próximos 30 dias e em aprovação, despesas por seção e últimos pagamentos.
+- **Pasta digital mensal**: gerada pela fila (`pasta_digital.gerar`) ao **fechar o período** ou pelo botão no painel (`financeiro:manage`). ZIP em bucket privado `pastas-digitais`: balancete (o emitido, ou um demonstrativo), orçado × realizado por seção (CSV), relação de pagamentos (CSV) e as notas/faturas do Paybox. Download por link temporário (10 min) e **visto** do síndico/conselho com observação.
+- Fica para depois: balancete em PDF por seção (hoje o PDF do balancete segue com a lista de lançamentos; a visão por seção está no orçado × realizado e na pasta digital); rateio do orçamento para calcular a taxa condominial.
+
 | 6 — Análise tributária | ✅ Concluída em 2026-11-22 (V128 aplicada) | BackApi `1f0bd6e`; front `bb301b5` |
 
 Notas da Fase 6:
