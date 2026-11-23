@@ -331,5 +331,5 @@ Consolidado em 2026-11-22. Retomar a partir de 2026-11-23.
 
 | # | Item |
 |---|---|
-| C1 | Testar no navegador as telas novas das Fases 3 a 9 (portal do morador, acordos, análise tributária, Paybox, conciliação, previsão orçamentária, painel, NFS-e) |
-| C2 | As 3 falhas antigas dos testes do front em `PermissoesUsuarioComponent` (anteriores a este plano) |
+| C1 | Testar no navegador as telas novas das Fases 3 a 9 (portal do morador, acordos, análise tributária, Paybox, conciliação, previsão orçamentária, painel, NFS-e) — ✅ validado pelo usuário em 23/11/2026 |
+| C2 | As 3 falhas antigas dos testes do front em `PermissoesUsuarioComponent` (anteriores a este plano) — ✅ corrigido em 23/11/2026: o spec foi atualizado para o escopo do condomínio ativo (`CondominioContextService`) e para o parâmetro `motivo` do `setNivel`; suíte do front 30/30 |
