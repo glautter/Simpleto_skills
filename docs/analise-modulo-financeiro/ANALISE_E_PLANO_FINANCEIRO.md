@@ -305,7 +305,7 @@ Consolidado em 2026-11-22. Retomar a partir de 2026-11-23.
 | # | Item | O que falta | Destrava |
 |---|---|---|---|
 | A1 | CNAB 400 de cobrança (remessa e retorno), Bradesco e Itaú — Fase 2 | Arquivos reais de remessa/retorno e manuais dos bancos | Boleto registrado, leitura de retorno (reativa o `baixar-por-arquivo`), baixa automática no portal (Fase 3), 2ª via com boleto/Pix registrado |
-| A2 | Remessa de pagamentos CNAB 240 e retorno — Fase 7 | Layouts de pagamento do banco | Pagamento das contas aprovadas pela fila de remessa, guias como conta a pagar na remessa |
+| A2 | Remessa de pagamentos CNAB 240 e retorno — Fase 7. 🟡 **Remessa Itaú feita em 24/11/2026** (V138; idêntica byte a byte às 3 remessas reais de exemplo) | Arquivo de **retorno** do Itaú; arquivos do Bradesco | Pagamento das contas aprovadas pela fila de remessa, guias como conta a pagar na remessa |
 | A3 | Homologação da NFS-e — Fase 9 | Certificado A1 (e-CNPJ) da administradora | Emissão real; confirmar se o município aceita `pAliq`/`IM` e o grupo IBS/CBS |
 | A4 | Chave do cofre em produção — Fase 9 | Criar a variável `Nfse__ChaveCofre` (32 bytes em base64) no servidor | Envio do certificado em produção |
 | A5 | Contratos de administração e CNPJ dos condomínios — Fase 9 | Cadastro (taxa, tipo, dia de vencimento) | Faturamento da taxa de administração |
